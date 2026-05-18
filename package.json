@@ -1,0 +1,10 @@
+{
+  "name": "luxury-multi-ai",
+  "version": "1.0.0",
+  "description": "Luxury Multi-AI Orchestration Platform",
+  "main": "index.html",
+  "scripts": {
+    "build": "mkdir -p dist && cp index.html dist/ && cp -r assets dist/ 2>/dev/null || true",
+    "start": "echo 'No start script needed for static hosting'"
+  }
+}
