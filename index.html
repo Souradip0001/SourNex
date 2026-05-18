@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOURNEX | Multi-AI Luxury Orchestration</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        luxury: {
+                            dark: "#0B0B0C",
+                            surface: "#141417",
+                            border: "#222226",
+                            gold: {
+                                DEFAULT: "#D4AF37",
+                                muted: "#AA7C11",
+                                light: "#F3E5AB"
+                            }
+                        }
+                    },
+                    boxShadow: {
+                        'gold-glow': '0 0 20px rgba(212, 175, 55, 0.08)',
+                        'gold-glow-focus': '0 0 25px rgba(212, 175, 55, 0.2)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom smooth scrollbar for premium feel */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0B0B0C; }
+        ::-webkit-scrollbar-thumb { background: #222226; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+        
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #FFF 30%, #D4AF37 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-luxury-dark text-white min-h-screen flex flex-col font-sans selection:bg-luxury-gold/30 selection:text-white">
+
+    <!-- Premium Top Navigation Bar -->
+    <header class="h-16 border-b border-luxury-border bg-luxury-dark/80 backdrop-blur-md sticky top-0 z-50 px-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <!-- Luxury minimalist geometric logo placeholder -->
+            <div class="h-8 w-8 border border-luxury-gold flex items-center justify-center rotate-45 transform transition-transform hover:rotate-90 duration-500">
+                <span class="-rotate-45 text-xs font-serif text-luxury-gold font-bold">S</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-[0.25em] uppercase gold-gradient-text">Sournex</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-xs tracking-widest text-zinc-500 uppercase">Tier: Infinite</span>
+            <div class="h-2 w-2 rounded-full bg-luxury-gold animate-pulse"></div>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Workspace Layout -->
+    <main class="flex-1 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-luxury-border h-[calc(100vh-4rem)] overflow-hidden">
+        
+        <!-- COLUMN 1: OPENAI -->
+        <section class="flex flex-col h-full bg-luxury-dark">
+            <div class="p-4 border-b border-luxury-border bg-luxury-surface/40 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-serif text-luxury-gold font-bold border border-luxury-gold/30 px-2 py-0.5 rounded">AI 1</span>
+                    <h2 class="text-sm font-semibold tracking-wider uppercase text-zinc-300">OpenAI Workspace</h2>
+                </div>
+                <select class="bg-luxury-dark border border-luxury-border text-xs text-luxury-gold-light focus:border-luxury-gold focus:outline-none px-2 py-1 rounded">
+                    <option>GPT-4o</option>
+                    <option>GPT-4o-mini</option>
+                    <option>o1-preview</option>
+                </select>
+            </div>
+            <!-- Chat Feed Output Container -->
+            <div id="openai-feed" class="flex-1 p-4 overflow-y-auto space-y-4">
+                <!-- System intro message -->
+                <div class="max-w-[85%] bg-luxury-surface border border-luxury-border/60 p-3 rounded-lg shadow-gold-glow">
+                    <p class="text-xs text-luxury-gold tracking-wider uppercase mb-1 font-semibold">Sournex Core</p>
+                    <p class="text-sm text-zinc-400">OpenAI engine initialized. Awaiting sequence trigger.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMN 2: GEMINI -->
+        <section class="flex flex-col h-full bg-luxury-dark">
+            <div class="p-4 border-b border-luxury-border bg-luxury-surface/40 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-serif text-luxury-gold font-bold border border-luxury-gold/30 px-2 py-0.5 rounded">AI 2</span>
+                    <h2 class="text-sm font-semibold tracking-wider uppercase text-zinc-300">Gemini Workspace</h2>
+                </div>
+                <select class="bg-luxury-dark border border-luxury-border text-xs text-luxury-gold-light focus:border-luxury-gold focus:outline-none px-2 py-1 rounded">
+                    <option>Gemini 1.5 Pro</option>
+                    <option>Gemini 1.5 Flash</option>
+                    <option>Gemini Ultra</option>
+                </select>
+            </div>
+            <!-- Chat Feed Output Container -->
+            <div id="gemini-feed" class="flex-1 p-4 overflow-y-auto space-y-4">
+                <div class="max-w-[85%] bg-luxury-surface border border-luxury-border/60 p-3 rounded-lg shadow-gold-glow">
+                    <p class="text-xs text-luxury-gold tracking-wider uppercase mb-1 font-semibold">Sournex Core</p>
+                    <p class="text-sm text-zinc-400">Gemini engine initialized. Ready to intercept context flow.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMN 3: CLAUDE -->
+        <section class="flex flex-col h-full bg-luxury-dark">
+            <div class="p-4 border-b border-luxury-border bg-luxury-surface/40 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-serif text-luxury-gold font-bold border border-luxury-gold/30 px-2 py-0.5 rounded">AI 3</span>
+                    <h2 class="text-sm font-semibold tracking-wider uppercase text-zinc-300">Claude Workspace</h2>
+                </div>
+                <select class="bg-luxury-dark border border-luxury-border text-xs text-luxury-gold-light focus:border-luxury-gold focus:outline-none px-2 py-1 rounded">
+                    <option>Claude 3.5 Sonnet</option>
+                    <option>Claude 3.5 Opus</option>
+                    <option>Claude 3 Haiku</option>
+                </select>
+            </div>
+            <!-- Chat Feed Output Container -->
+            <div id="claude-feed" class="flex-1 p-4 overflow-y-auto space-y-4">
+                <div class="max-w-[85%] bg-luxury-surface border border-luxury-border/60 p-3 rounded-lg shadow-gold-glow">
+                    <p class="text-xs text-luxury-gold tracking-wider uppercase mb-1 font-semibold">Sournex Core</p>
+                    <p class="text-sm text-zinc-400">Claude engine initialized. Ready to synthesize terminal chain.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Unified Master Input Bar Area -->
+    <footer class="p-4 border-t border-luxury-border bg-luxury-surface/20 backdrop-blur-md">
+        <div class="max-w-4xl mx-auto relative flex items-center">
+            <textarea id="master-input" rows="1" class="w-full bg-luxury-surface border border-luxury-border text-white placeholder-zinc-500 text-sm rounded-xl pl-4 pr-16 py-3.5 focus:outline-none focus:border-luxury-gold focus:shadow-gold-glow-focus resize-none transition-all duration-300" placeholder="Type an initial prompt to spark the Sournex chain reaction..."></textarea>
+            
+            <button id="send-btn" class="absolute right-2 top-1.5 bottom-1.5 px-4 bg-gradient-to-r from-luxury-gold-muted to-luxury-gold text-black font-medium text-xs tracking-widest uppercase rounded-lg hover:from-luxury-gold hover:to-luxury-gold-light transition-all duration-300 shadow-md active:scale-95">
+                Execute
+            </button>
+        </div>
+    </footer>
+
+</body>
+</html>
+      
