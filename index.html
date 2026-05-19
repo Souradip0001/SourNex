@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,7 +46,7 @@
 <body class="bg-luxury-dark text-white min-h-screen flex flex-col font-sans selection:bg-luxury-gold/30 selection:text-white">
 
     <!-- Premium Top Navigation Bar -->
-    <header class="h-16 border-b border-luxury-border bg-luxury-dark/80 backdrop-blur-md sticky top-0 z-50 px-6 flex items-center justify-between">
+     <header class="h-16 border-b border-luxury-border bg-luxury-dark/80 backdrop-blur-md sticky top-0 z-50 px-6 flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <div class="h-8 w-8 border border-luxury-gold flex items-center justify-center rotate-45 transform transition-transform hover:rotate-90 duration-500">
                 <span class="-rotate-45 text-xs font-serif text-luxury-gold font-bold">S</span>
@@ -54,10 +54,25 @@
             <h1 class="text-xl font-bold tracking-[0.25em] uppercase gold-gradient-text">Sournex</h1>
         </div>
         <div class="flex items-center space-x-4">
-            <span class="text-xs tracking-widest text-zinc-500 uppercase">Engine: Sequential</span>
+            <button id="vault-toggle" class="text-xs tracking-widest text-luxury-gold hover:text-luxury-gold-light border border-luxury-gold/30 px-2 py-1 rounded transition-colors duration-200 uppercase font-mono">
+                [Vault]
+            </button>
             <div class="h-2 w-2 rounded-full bg-luxury-gold animate-pulse"></div>
         </div>
     </header>
+
+    <div id="vault-drawer" class="hidden border-b border-luxury-border bg-luxury-surface/90 backdrop-blur-md p-4 space-y-3 animate-fade-in">
+        <p class="text-xs text-luxury-gold tracking-widest uppercase font-mono font-semibold">Local API Vault (Stored Securely on Device)</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input type="password" id="key-openai" placeholder="OpenAI Secret Key (sk-...)" class="bg-luxury-dark border border-luxury-border p-2 rounded text-xs text-zinc-300 focus:outline-none focus:border-luxury-gold">
+            <input type="password" id="key-gemini" placeholder="Gemini API Key" class="bg-luxury-dark border border-luxury-border p-2 rounded text-xs text-zinc-300 focus:outline-none focus:border-luxury-gold">
+            <input type="password" id="key-claude" placeholder="Claude API Key" class="bg-luxury-dark border border-luxury-border p-2 rounded text-xs text-zinc-300 focus:outline-none focus:border-luxury-gold">
+        </div>
+        <button id="vault-save" class="px-4 py-1.5 bg-luxury-gold text-black text-xs uppercase font-bold tracking-wider rounded hover:bg-luxury-gold-light transition-all duration-200">
+            Secure Keys
+        </button>
+    </div>
+
 
     <!-- Main Thread Area (Single Unified Column Layout) -->
         <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 overflow-y-auto space-y-6 h-[calc(100vh-8.5rem)]" id="chat-thread">
@@ -110,6 +125,6 @@
 
         </div>
     </footer>
-
+    <script src="assets/js/app.js"></script>
 </body>
 </html>
