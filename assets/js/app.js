@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const modelConfigs = {
         openai: { name: 'OpenAI GPT-4o', short: 'OAI', colorClass: 'border-amber-500/30 text-amber-400 bg-amber-950/10' },
-        gemini: { name: 'Gemini 1.5 Pro', short: 'GMN', colorClass: 'border-emerald-500/30 text-emerald-400 bg-emerald-950/10' },
+        gemini: { name: 'Gemini 2.5 Flash', short: 'GMN', colorClass: 'border-emerald-500/30 text-emerald-400 bg-emerald-950/10' },
         claude: { name: 'Claude 3.5 Sonnet', short: 'CLD', colorClass: 'border-purple-500/30 text-purple-400 bg-purple-950/10' }
     };
 
@@ -109,14 +109,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!apiKey) return `Error: Missing API Key for ${model.toUpperCase()}. Click the [Vault] button at the top to add it.`;
 
         // The Chain Reaction Core Concept: Merge prior output message as raw context baseline input
-        let structuralSystemPrompt = "You are a helpful, professional assistant running inside Sournex luxury platform. Respond naturally like a human dialogue thread.";
+        let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform. You must chat beautifully, cleanly, and naturally like a human dialogue thread. Never output raw json parameters, debug traces, or mechanical templates.";
         if (fallbackContext) {
-            structuralSystemPrompt += `\n\nCRITICAL CONTEXT BASELINE FROM PREVIOUS MODEL TURN: \n"""\n${fallbackContext}\n"""\n\nYou must explicitly follow up on, modify, or extend the context above based on the user's new prompt instruction. Do not explain the process, just respond naturally inside the chat flow.`;
+            structuralSystemPrompt += `\n\nCRITICAL CONTEXT BASELINE FROM PREVIOUS MODEL TURN: \n"""\n${fallbackContext}\n"""\n\nYou must explicitly follow up on, modify, or extend the context provided above based on the user's new request. Do not explain this mechanism; seamlessly blend the context into your response text naturally.`;
         }
 
         try {
             if (model === 'gemini') {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+                // Using the bleeding edge stable v1beta pathway for complete public domain compliance
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -124,8 +125,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         contents: [{ parts: [{ text: `${structuralSystemPrompt}\n\nUser Instruction: ${currentPrompt}` }] }]
                     })
                 });
+                
                 const data = await response.json();
-                return data.candidates[0].content.parts[0].text;
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+                    return data.candidates[0].content.parts[0].text;
+                } else if (data.error) {
+                    return `API Error from Google: ${data.error.message}`;
+                } else {
+                    return `Unexpected response structure from Google. Ensure your AI Studio key is completely updated.`;
+                }
             } 
             
             else if (model === 'openai') {
@@ -151,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Content-Type': 'application/json',
                         'x-api-key': apiKey,
                         'anthropic-version': '2023-06-01',
-                        'dangerously-allow-html-user-override': 'true' // Required to talk directly from static web domains
+                        'dangerously-allow-html-user-override': 'true'
                     },
                     body: JSON.stringify({
                         model: 'claude-3-5-sonnet-20241022',
@@ -181,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Run network execution sequence
         const liveOutputText = await fetchLiveAIResponse(selectedModel, promptText, lastMessageContext);
         
-        // Render perfectly clean, unique humanized prose text output
+        // Render perfectly clean humanized prose text output
         textTarget.innerText = liveOutputText;
         
         // Bind outputs into contextual chain variables
@@ -198,4 +207,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-  
+                    
