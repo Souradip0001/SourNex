@@ -115,10 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            if (model === 'gemini') {
-                // Using the bleeding edge stable v1beta pathway for complete public domain compliance
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(url, {
+                        if (model === 'gemini') {
+                // Try the premier model tier first
+                let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                
+                let response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -126,16 +127,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 });
                 
-                const data = await response.json();
+                let data = await response.json();
                 
+                // If Google says "high demand" (503 / overloaded), instantly swap to the Flash-Lite engine!
+                if (data.error && (data.error.code === 503 || data.error.message.includes('demand'))) {
+                    console.log("Primary model busy. Initiating fallback sequence...");
+                    
+                    const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+                    const fallbackResponse = await fetch(fallbackUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `${structuralSystemPrompt}\n\nUser Instruction: ${currentPrompt}` }] }]
+                        })
+                    });
+                    data = await fallbackResponse.json();
+                }
+                
+                // Final clean parser step
                 if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
                     return data.candidates[0].content.parts[0].text;
                 } else if (data.error) {
                     return `API Error from Google: ${data.error.message}`;
                 } else {
-                    return `Unexpected response structure from Google. Ensure your AI Studio key is completely updated.`;
+                    return `Unexpected response structure from Google. Please try again.`;
                 }
-            } 
+            }
+
             
             else if (model === 'openai') {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
