@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    // Enable basic security headers
+    // Basic API security flags
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -10,12 +10,14 @@ export default async function handler(req, res) {
     try {
         const { model, currentPrompt, fallbackContext } = req.body;
         
-        // Grab your hidden secret key from Vercel's environment vault
+        // Pull the hidden variable out of Vercel
         const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) return res.status(500).json({ error: 'Server config error: OpenRouter Key missing.' });
+        if (!apiKey) {
+            return res.status(500).json({ error: 'OpenRouter Key missing from Vercel environments dashboard.' });
+        }
 
-        // Map your frontend buttons to completely free, zero-cost OpenRouter models
-        let openRouterModel = 'google/gemini-2.5-flash:free'; // Default fallback
+        // Map frontend layout choices directly to OpenRouter's free-tier endpoints
+        let openRouterModel = 'google/gemini-2.5-flash:free'; 
         if (model === 'openai') {
             openRouterModel = 'google/gemini-2.5-flash:free'; 
         } else if (model === 'gemini') {
@@ -29,14 +31,12 @@ export default async function handler(req, res) {
             structuralSystemPrompt += `\n\nCONTEXT LAYER HISTORY:\n"""\n${fallbackContext}\n"""\nFollow up on this sequence context naturally.`;
         }
 
-        // Fetch request directly to OpenRouter's universal gateway server
+        // Hit the OpenRouter system pipeline
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://vercel.com', 
-                'X-Title': 'Sournex Workspace'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: openRouterModel,
@@ -49,10 +49,13 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         
+        // Clean routing validation check
         if (data.choices && data.choices[0] && data.choices[0].message) {
             return res.status(200).json({ text: data.choices[0].message.content });
         } else {
-            return res.status(500).json({ error: 'Invalid response from gateway server.', raw: data });
+            // Hand over the detailed error response from OpenRouter
+            const errMsg = data.error ? data.error.message : 'Unknown gateway mapping error';
+            return res.status(200).json({ text: `Gateway error context: ${errMsg}` });
         }
 
     } catch (err) {
