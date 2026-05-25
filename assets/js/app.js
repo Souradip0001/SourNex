@@ -5,11 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const masterInput = document.getElementById('master-input');
     const sendBtn = document.getElementById('send-btn');
     const modelButtons = document.querySelectorAll('footer button:not(#send-btn)');
-    
-    // Vault UI Connections
-    const vaultToggle = document.getElementById('vault-toggle');
-    const vaultDrawer = document.getElementById('vault-drawer');
-    const vaultSave = document.getElementById('vault-save');
 
     // Platform State Configurations
     let selectedModel = 'openai'; 
@@ -21,24 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gemini: { name: 'Gemini 2.5 Flash', short: 'GMN', colorClass: 'border-emerald-500/30 text-emerald-400 bg-emerald-950/10' },
         claude: { name: 'Claude 3.5 Sonnet', short: 'CLD', colorClass: 'border-purple-500/30 text-purple-400 bg-purple-950/10' }
     };
-
-    // Load Existing Keys quietly on load
-    ['openai', 'gemini', 'claude'].forEach(provider => {
-        const savedKey = localStorage.getItem(`sournex_key_${provider}`);
-        if (savedKey) document.getElementById(`key-${provider}`).value = savedKey;
-    });
-
-    // Vault Toggle Handler
-    vaultToggle.addEventListener('click', () => vaultDrawer.classList.toggle('hidden'));
-
-    // Save Vault Keys Local Storage Setup
-    vaultSave.addEventListener('click', () => {
-        localStorage.setItem('sournex_key_openai', document.getElementById('key-openai').value.trim());
-        localStorage.setItem('sournex_key_gemini', document.getElementById('key-gemini').value.trim());
-        localStorage.setItem('sournex_key_claude', document.getElementById('key-claude').value.trim());
-        vaultDrawer.classList.add('hidden');
-        alert('Sournex Secure Vault Updated.');
-    });
 
     // UI Tab State Switching Logic
     modelButtons.forEach(btn => {
@@ -77,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const conf = modelConfigs[modelKey];
         const uniqueId = `seq-${Date.now()}`;
         const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
-        
+
         const modelHtml = `
             <div class="flex items-start space-x-4 animate-fade-in">
                 <div class="h-8 w-8 rounded border ${conf.colorClass} flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
@@ -94,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
                     </div>
                     <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
-                        <span class="italic text-zinc-500 animate-pulse">Connecting to live engine...</span>
+                        <span class="italic text-zinc-500 animate-pulse">Connecting via Vercel Secure Node...</span>
                     </p>
                 </div>
             </div>`;
@@ -103,95 +80,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return uniqueId;
     }
 
-    // Network Engine Dispatcher
+    // Network Engine Dispatcher - Relies strictly on Vercel Backend Server Route
     async function fetchLiveAIResponse(model, currentPrompt, fallbackContext) {
-        const apiKey = localStorage.getItem(`sournex_key_${model}`);
-        if (!apiKey) return `Error: Missing API Key for ${model.toUpperCase()}. Click the [Vault] button at the top to add it.`;
-
-        // The Chain Reaction Core Concept: Merge prior output message as raw context baseline input
-        let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform. You must chat beautifully, cleanly, and naturally like a human dialogue thread. Never output raw json parameters, debug traces, or mechanical templates.";
-        if (fallbackContext) {
-            structuralSystemPrompt += `\n\nCRITICAL CONTEXT BASELINE FROM PREVIOUS MODEL TURN: \n"""\n${fallbackContext}\n"""\n\nYou must explicitly follow up on, modify, or extend the context provided above based on the user's new request. Do not explain this mechanism; seamlessly blend the context into your response text naturally.`;
-        }
-
         try {
-                        if (model === 'gemini') {
-                // Try the premier model tier first
-                let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-                
-                let response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `${structuralSystemPrompt}\n\nUser Instruction: ${currentPrompt}` }] }]
-                    })
-                });
-                
-                let data = await response.json();
-                
-                // If Google says "high demand" (503 / overloaded), instantly swap to the Flash-Lite engine!
-                if (data.error && (data.error.code === 503 || data.error.message.includes('demand'))) {
-                    console.log("Primary model busy. Initiating fallback sequence...");
-                    
-                    const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
-                    const fallbackResponse = await fetch(fallbackUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: `${structuralSystemPrompt}\n\nUser Instruction: ${currentPrompt}` }] }]
-                        })
-                    });
-                    data = await fallbackResponse.json();
-                }
-                
-                // Final clean parser step
-                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
-                    return data.candidates[0].content.parts[0].text;
-                } else if (data.error) {
-                    return `API Error from Google: ${data.error.message}`;
-                } else {
-                    return `Unexpected response structure from Google. Please try again.`;
-                }
-            }
-
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, currentPrompt, fallbackContext })
+            });
             
-            else if (model === 'openai') {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify({
-                        model: 'gpt-4o',
-                        messages: [
-                            { role: 'system', content: structuralSystemPrompt },
-                            { role: 'user', content: currentPrompt }
-                        ]
-                    })
-                });
-                const data = await response.json();
-                return data.choices[0].message.content;
-            }
-
-            else if (model === 'claude') {
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01',
-                        'dangerously-allow-html-user-override': 'true'
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-3-5-sonnet-20241022',
-                        max_tokens: 2048,
-                        system: structuralSystemPrompt,
-                        messages: [{ role: 'user', content: currentPrompt }]
-                    })
-                });
-                const data = await response.json();
-                return data.content[0].text;
+            const data = await response.json();
+            
+            if (data.text) {
+                return data.text;
+            } else if (data.error) {
+                return `Server Error: ${data.error}`;
+            } else {
+                return `Backend mapping failed to parse response sequence.`;
             }
         } catch (err) {
-            return `Connection failed. Error structural diagnostic details: ${err.message}`;
+            return `Secure link failed to clear network layer: ${err.message}`;
         }
     }
 
@@ -207,10 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Run network execution sequence
         const liveOutputText = await fetchLiveAIResponse(selectedModel, promptText, lastMessageContext);
-        
+
         // Render perfectly clean humanized prose text output
         textTarget.innerText = liveOutputText;
-        
+
         // Bind outputs into contextual chain variables
         lastMessageContext = liveOutputText;
         outputLayerCounter++;
@@ -225,4 +133,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-                    
