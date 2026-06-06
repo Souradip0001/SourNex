@@ -13,19 +13,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initializeModelMatrix() {
         try {
-            const res = await fetch('https://openrouter.ai/api/v1/models');
+            // FIXED: Fetch directory through your own Vercel server proxy to bypass CORS/glitches
+            const res = await fetch('/api/chat', { method: 'GET' });
             const data = await res.json();
             
             if (!data.data || data.data.length === 0) throw new Error("Index data empty");
 
-            // 1. Capture free tiers AND filter out non-conversational utility tools
+            // Filter out premium tiers and non-conversational helper filters
             const freeChatModels = data.data.filter(model => {
                 const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) === 0);
-                
                 const modelIdLower = model.id.toLowerCase();
                 const nameLower = (model.name || '').toLowerCase();
                 
-                // Exclude safety filters, guardrails, and vector embedding engines
                 const isUtility = modelIdLower.includes('safety') || nameLower.includes('safety') ||
                                   modelIdLower.includes('moderation') || nameLower.includes('moderation') ||
                                   modelIdLower.includes('embed') || modelIdLower.includes('similarity');
