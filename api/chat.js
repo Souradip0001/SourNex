@@ -7,7 +7,6 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        // Grab model ID straight from dynamic client pass sequence
         const { model, currentPrompt, fallbackContext } = req.body;
         
         const apiKey = process.env.OPENROUTER_API_KEY;
@@ -15,7 +14,6 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'OpenRouter Key missing from Vercel environments dashboard.' });
         }
 
-        // Auto-assign global fallback router if choice variable gets dropped
         const activeTargetModel = model || 'openrouter/free';
 
         let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform. You must chat beautifully, cleanly, and naturally like a human dialogue thread.";
