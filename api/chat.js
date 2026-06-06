@@ -16,8 +16,19 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'OpenRouter Key missing from Vercel environments dashboard.' });
         }
 
-        // Use OpenRouter's universal free router to automatically find the best online model
-        let openRouterModel = 'openrouter/free'; 
+        // RIGHTFUL MAPPING: Match frontend tabs directly to specific, stable free models
+        let openRouterModel = 'google/gemini-2.5-flash:free'; // Ultimate stable fallback
+        
+        if (model === 'openai') {
+            // Using Mistral's premier free model as a high-quality substitute for the OpenAI tab
+            openRouterModel = 'mistralai/mistral-7b-instruct:free'; 
+        } else if (model === 'gemini') {
+            // Force the Gemini tab to talk strictly to Google's official free engine
+            openRouterModel = 'google/gemini-2.5-flash:free';
+        } else if (model === 'claude') {
+            // Claude has no official free endpoint, so we use Meta's elite 70B flagship free model
+            openRouterModel = 'meta-llama/llama-3.3-70b-instruct:free';
+        }
 
         let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform. You must chat beautifully, cleanly, and naturally like a human dialogue thread.";
         if (fallbackContext) {
