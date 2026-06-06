@@ -9,12 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedModelId = ''; 
     let lastMessageContext = '';   
     let outputLayerCounter = 1;
+
+    // Registry arrays to track discovered architecture states
     let modelMetadataRegistry = {};
 
-    // Initialize Page Sequence - Load live API listings and check network health
+    // Initialize Page Sequence - Load live API listings from public endpoints
     async function initializeModelMatrix() {
         try {
-            // Fetch live data directly from OpenRouter open directory endpoint
+            // Fetch live index data safely from OpenRouter open directory endpoint
             const res = await fetch('https://openrouter.ai/api/v1/models');
             const data = await res.json();
             
@@ -24,27 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const freeModels = data.data.filter(m => m.id.includes(':free') || (m.pricing && parseFloat(m.pricing.prompt) === 0));
 
             if (freeModels.length === 0) {
+                dynamicModelDock.innerHTML = `<span class="text-xs text-amber-500 p-2">No direct allocations available. Defaulting to router network.</span>`;
                 setupFallbackModel();
                 return;
             }
 
-            dynamicModelDock.innerHTML = ''; // Clear loading text
-            let functionalModelSelected = false;
-            let activeOnlineCount = 0;
-
-            freeModels.forEach((model) => {
-                // Check health flags from OpenRouter payload structure
-                // If a model is deprecated, under heavy load, or down, it will flag anomalies
-                const isDeprecated = model.deprecation !== null;
-                const isUnstable = model.description && (
-                    model.description.toLowerCase().includes('degraded') || 
-                    model.description.toLowerCase().includes('unstable') ||
-                    model.description.toLowerCase().includes('maintenance')
-                );
-                
-                const isWorkingFine = !isDeprecated && !isUnstable;
-
-                // Register tracking configurations internally
+            dynamicModelDock.innerHTML = ''; // Clear temporary loading placeholder text
+            
+            freeModels.forEach((model, index) => {
+                // Register tracking specifications internally
                 modelMetadataRegistry[model.id] = {
                     name: model.name || model.id.split('/')[1].replace(':free', ''),
                     short: model.id.split('/')[1].substring(0, 3).toUpperCase()
@@ -52,56 +42,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Create individual node button elements dynamically
                 const btn = document.createElement('button');
+                btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-800 text-zinc-400 bg-zinc-950/40 hover:text-white hover:border-zinc-700 transition-all duration-150 focus:outline-none";
+                btn.setAttribute('data-model-id', model.id);
                 
                 // Clean up presentation label names gracefully
                 let visualName = model.name.replace('(free)', '').replace(':free', '').trim();
+                btn.textContent = visualName;
 
-                if (isWorkingFine) {
-                    // Fully operational styling
-                    btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-800 text-zinc-400 bg-zinc-950/40 hover:text-white hover:border-zinc-700 transition-all duration-150 focus:outline-none cursor-pointer";
-                    btn.textContent = visualName;
-                    activeOnlineCount++;
-                } else {
-                    // ERROR PREVENTATIVE: Dim out broken/offline models completely before selection
-                    btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-900/60 text-zinc-600 bg-zinc-950/10 opacity-30 pointer-events-none line-through";
-                    btn.textContent = `${visualName} [DOWN]`;
-                    btn.disabled = true;
-                }
-
-                btn.setAttribute('data-model-id', model.id);
-                
-                // Click behavior only maps for healthy models
-                if (isWorkingFine) {
-                    btn.addEventListener('click', () => {
-                        document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
-                            b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
-                            b.classList.add('border-zinc-800', 'text-zinc-400');
-                        });
-                        btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
-                        btn.classList.remove('border-zinc-800', 'text-zinc-400');
-                        selectedModelId = model.id;
+                // Event listener sequence mapping
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#dynamic-model-dock button').forEach(b => {
+                        b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
+                        b.classList.add('border-zinc-800', 'text-zinc-400');
                     });
+                    btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
+                    btn.classList.remove('border-zinc-800', 'text-zinc-400');
+                    selectedModelId = model.id;
+                });
 
-                    dynamicModelDock.appendChild(btn);
+                dynamicModelDock.appendChild(btn);
 
-                    // Auto-select the first completely stable/healthy model found
-                    if (!functionalModelSelected) {
-                        btn.click();
-                        functionalModelSelected = true;
-                    }
-                } else {
-                    // Append broken models to the bottom of the list out of the way
-                    dynamicModelDock.appendChild(btn);
+                // Auto-select the first discovery array allocation as active element
+                if (index === 0) {
+                    btn.click();
                 }
             });
 
-            // Fallback safety if the entire free network is acting up
-            if (!functionalModelSelected) {
-                setupFallbackModel();
-                return;
-            }
-
-            // Unlock interface fields once everything validates
+            // Unlock interface fields once configuration arrays resolve completely
             masterInput.disabled = false;
             masterInput.placeholder = "Type instructions for the next model layer...";
             sendBtn.disabled = false;
@@ -109,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sendBtn.textContent = "Run";
             
             statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
-            statusText.textContent = `${activeOnlineCount} Layers Online`;
+            statusText.textContent = `${freeModels.length} Layers Online`;
 
         } catch (err) {
             console.error("Matrix compilation failed, falling back to router wrapper:", err);
@@ -123,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         dynamicModelDock.innerHTML = `
             <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
-                Universal Free Router (Fail-Safe)
+                Universal Free Router (Auto-Fallback)
             </button>`;
             
         masterInput.disabled = false;
@@ -181,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext) {
         try {
-            const response = await fetch('/api/api/chat' || '/api/chat', {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext })
@@ -234,5 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
     };
 
+    // Initialize Matrix Core Link Configuration Routine on Boot
     initializeModelMatrix();
 });
