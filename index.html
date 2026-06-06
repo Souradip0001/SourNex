@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOURNEX | Multi-AI Luxury Thread</title>
+    <title>SOURNEX | Dynamic Neural Array</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -42,45 +42,35 @@
             </div>
             <div>
                 <h1 class="text-xs font-semibold tracking-[0.25em] text-white uppercase flex items-center">
-                    SOURNEX <span class="text-[9px] text-zinc-500 font-mono tracking-widest ml-3 normal-case font-normal border-l border-zinc-800 pl-3">ENGINE: SEQUENTIAL</span>
+                    SOURNEX <span class="text-[9px] text-zinc-500 font-mono tracking-widest ml-3 normal-case font-normal border-l border-zinc-800 pl-3">ENGINE: DYNAMIC ARRAY</span>
                 </h1>
             </div>
         </div>
         <div class="flex items-center space-x-2">
-            <span class="h-2 w-2 rounded-full bg-amber-500/80 animate-pulse"></span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Live Secure Node</span>
+            <span class="h-2 w-2 rounded-full bg-emerald-500/80 animate-pulse" id="engine-status-glow"></span>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500" id="engine-status-text">Scanning Matrix...</span>
         </div>
     </header>
 
     <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 overflow-y-auto space-y-6" id="chat-thread">
-        
         <div class="flex items-start space-x-4 animate-fade-in">
             <div class="h-8 w-8 rounded border border-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] font-mono text-zinc-500 bg-zinc-950">SYS</div>
             <div class="bg-luxury-surface border border-luxury-border/60 p-5 rounded-xl w-full">
-                <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold mb-1">Sournex Core</p>
+                <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold mb-1">Sournex Matrix Initialize</p>
                 <p class="text-sm text-zinc-400 leading-relaxed">
-                    Welcome to your luxury orchestration space. Type a prompt below to begin. Each response acts as the baseline layer for whichever model you select next.
+                    Live compilation vector active. The footer menu below is currently streaming direct, real-time allocations from OpenRouter's zero-cost computing layer.
                 </p>
             </div>
         </div>
-
     </main>
 
     <footer class="border-t border-luxury-border bg-luxury-surface/40 backdrop-blur-xl p-4 sticky bottom-0 z-40">
         <div class="max-w-3xl w-full mx-auto space-y-4">
             
-            <div class="flex items-center justify-between">
-                <p class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Route Next Command To:</p>
-                <div class="flex items-center space-x-1.5 p-1 bg-luxury-dark/80 border border-luxury-border rounded-lg">
-                    <button class="px-3 py-1 text-[11px] uppercase tracking-wider font-semibold rounded text-black bg-luxury-gold transition-all duration-150 focus:outline-none">
-                        OpenAI
-                    </button>
-                    <button class="px-3 py-1 text-[11px] uppercase tracking-wider rounded text-zinc-400 hover:text-white transition-all duration-150 focus:outline-none">
-                        Gemini
-                    </button>
-                    <button class="px-3 py-1 text-[11px] uppercase tracking-wider rounded text-zinc-400 hover:text-white transition-all duration-150 focus:outline-none">
-                        Claude
-                    </button>
+            <div class="space-y-2">
+                <p class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Active Allocations (Free Network):</p>
+                <div class="flex flex-wrap gap-1.5 p-1.5 bg-luxury-dark/80 border border-luxury-border rounded-xl max-h-32 overflow-y-auto" id="dynamic-model-dock">
+                    <span class="text-[11px] text-zinc-600 italic px-2 py-1">Contacting live metadata registry...</span>
                 </div>
             </div>
 
@@ -88,15 +78,17 @@
                 <textarea 
                     id="master-input"
                     rows="1" 
-                    placeholder="Type instructions for the next model layer..." 
-                    class="w-full bg-transparent text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none resize-none pr-14 py-1.5 leading-relaxed font-normal"
+                    placeholder="Awaiting target configuration allocation..." 
+                    disabled
+                    class="w-full bg-transparent text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none resize-none pr-14 py-1.5 leading-relaxed font-normal disabled:opacity-40"
                 ></textarea>
                 
                 <button 
                     id="send-btn"
-                    class="absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none"
+                    disabled
+                    class="absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-800 text-zinc-500 transition-all focus:outline-none disabled:opacity-50"
                 >
-                    Run
+                    Lock
                 </button>
             </div>
             
