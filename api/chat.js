@@ -16,15 +16,8 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'OpenRouter Key missing from Vercel environments dashboard.' });
         }
 
-        // Map frontend layout choices directly to OpenRouter's free-tier endpoints
-        let openRouterModel = 'google/gemini-2.5-flash:free'; 
-        if (model === 'openai') {
-            openRouterModel = 'google/gemini-2.5-flash:free'; 
-        } else if (model === 'gemini') {
-            openRouterModel = 'google/gemini-2.5-flash:free';
-        } else if (model === 'claude') {
-            openRouterModel = 'meta-llama/llama-3.3-70b-instruct:free';
-        }
+        // Use OpenRouter's universal free router to automatically find the best online model
+        let openRouterModel = 'openrouter/free'; 
 
         let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform. You must chat beautifully, cleanly, and naturally like a human dialogue thread.";
         if (fallbackContext) {
@@ -36,7 +29,9 @@ export default async function handler(req, res) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://vercel.com',
+                'X-Title': 'Sournex Workspace'
             },
             body: JSON.stringify({
                 model: openRouterModel,
