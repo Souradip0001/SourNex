@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let activeOnlineCount = 0;
 
             freeChatModels.forEach((model) => {
-                const isDeprecated = model.deprecation !== null;
+                const isDeprecated = model.deprecation != null;
                 const isUnstable = model.description && (
                     model.description.toLowerCase().includes('degraded') || 
                     model.description.toLowerCase().includes('unstable') ||
