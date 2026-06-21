@@ -10,16 +10,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastMessageContext = '';   
     let outputLayerCounter = 1;
     let modelMetadataRegistry = {};
+    
+    // Track active HTTP network requests to cancel them safely
+    let currentAbortController = null; 
+    let isGenerating = false;
 
     async function initializeModelMatrix() {
         try {
-            // FIXED: Fetch directory through your own Vercel server proxy to bypass CORS/glitches
             const res = await fetch('/api/chat', { method: 'GET' });
             const data = await res.json();
             
             if (!data.data || data.data.length === 0) throw new Error("Index data empty");
 
-            // Filter out premium tiers and non-conversational helper filters
             const freeChatModels = data.data.filter(model => {
                 const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) === 0);
                 const modelIdLower = model.id.toLowerCase();
@@ -42,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let activeOnlineCount = 0;
 
             freeChatModels.forEach((model) => {
-                const isDeprecated = model.deprecation != null;
+                const isDeprecated = model.deprecation !== null;
                 const isUnstable = model.description && (
                     model.description.toLowerCase().includes('degraded') || 
                     model.description.toLowerCase().includes('unstable') ||
@@ -73,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (isWorkingFine) {
                     btn.addEventListener('click', () => {
+                        if (isGenerating) return; // Prevent model swapping mid-generation
                         document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
                             b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
                             b.classList.add('border-zinc-800', 'text-zinc-400');
@@ -100,9 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             masterInput.disabled = false;
             masterInput.placeholder = "Type instructions for the next model layer...";
-            sendBtn.disabled = false;
-            sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none";
-            sendBtn.textContent = "Run";
+            setButtonStateActive();
             
             statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
             statusText.textContent = `${activeOnlineCount} Layers Online`;
@@ -124,11 +125,29 @@ document.addEventListener('DOMContentLoaded', () => {
             
         masterInput.disabled = false;
         masterInput.placeholder = "Type instructions...";
-        sendBtn.disabled = false;
-        sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black focus:outline-none";
-        sendBtn.textContent = "Run";
+        setButtonStateActive();
         statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
         statusText.textContent = "Router Fail-Safe Mode";
+    }
+
+    // Toggle Button to Standard Active State
+    function setButtonStateActive() {
+        isGenerating = false;
+        sendBtn.disabled = false;
+        sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5";
+        sendBtn.innerHTML = `<span>Run</span>`;
+    }
+
+    // Toggle Button to Stop/Loading State with Tailwind animated spinner
+    function setButtonStateLoading() {
+        isGenerating = true;
+        sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
+        sendBtn.innerHTML = `
+            <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Stop</span>`;
     }
 
     function appendUserMessage(text) {
@@ -175,21 +194,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return uniqueId;
     }
 
-    async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext) {
+    async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext })
+                body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
+                signal: abortSignal // Link the stop controller token straight to the HTTP call
             });
             const data = await response.json();
             return data.text || `Server Error: ${data.error}`;
         } catch (err) {
+            if (err.name === 'AbortError') {
+                return `Generation terminated by operator. Core context detached.`;
+            }
             return `Secure link failed: ${err.message}`;
         }
     }
 
     async function handleExecute() {
+        // Core addition: If currently generating, treat clicking this button as a cancel command
+        if (isGenerating) {
+            if (currentAbortController) {
+                currentAbortController.abort();
+            }
+            setButtonStateActive();
+            return;
+        }
+
         const promptText = masterInput.value.trim();
         if (!promptText || !selectedModelId) return;
 
@@ -199,11 +231,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const textTargetId = appendModelSkeleton(selectedModelId, promptText);
         const textTarget = document.getElementById(`${textTargetId}-text`);
 
-        const liveOutputText = await fetchLiveAIResponse(selectedModelId, promptText, lastMessageContext);
+        // Spawn a fresh cancellation controller for this pipeline instance
+        currentAbortController = new AbortController();
+        setButtonStateLoading();
+
+        const liveOutputText = await fetchLiveAIResponse(
+            selectedModelId, 
+            promptText, 
+            lastMessageContext, 
+            currentAbortController.signal
+        );
+        
         textTarget.innerText = liveOutputText;
 
+        // Clean up internal context flags
         lastMessageContext = liveOutputText;
         outputLayerCounter++;
+        setButtonStateActive();
         chatThread.scrollTop = chatThread.scrollHeight;
     }
 
@@ -224,4 +268,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeModelMatrix();
 });
-            
