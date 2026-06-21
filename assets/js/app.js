@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return isFree && !isUtility;
             });
 
-            if (freeChatModels.length === 0) {
+            if (freeChatModels.length == 0) {
                 setupFallbackModel();
                 return;
             }
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let activeOnlineCount = 0;
 
             freeChatModels.forEach((model) => {
-                const isDeprecated = model.deprecation !== null;
+                const isDeprecated = model.deprecation != null;
                 const isUnstable = model.description && (
                     model.description.toLowerCase().includes('degraded') || 
                     model.description.toLowerCase().includes('unstable') ||
@@ -113,6 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
             setupFallbackModel();
         }
     }
+        function setupFallbackModel() {
+        selectedModelId = 'openrouter/free';
+        modelMetadataRegistry['openrouter/free'] = { name: 'SourNexZ Router', short: 'SNX' };
+        
+        dynamicModelDock.innerHTML = `
+            <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
+                SourNexZ Router
+            </button>`;
+            
+        masterInput.disabled = false;
+        masterInput.placeholder = "Type instructions...";
+        setButtonStateActive();
+        statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
+        statusText.textContent = "SourNexZ Router Active";
+        }
+    
 
     function setupFallbackModel() {
         selectedModelId = 'openrouter/free';
