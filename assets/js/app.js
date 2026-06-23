@@ -6,24 +6,80 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusGlow = document.getElementById('engine-status-glow');
     const statusText = document.getElementById('engine-status-text');
 
+    // --- SOURNEX AUTHENTICATION UI ELEMENTS ---
+    const authOverlay = document.getElementById('auth-overlay');
+    const authTitle = document.getElementById('auth-title');
+    const authForm = document.getElementById('credentials-form');
+    const authToggle = document.getElementById('auth-toggle');
+    const toggleMsg = document.getElementById('toggle-msg');
+    const btnSubmit = document.getElementById('btn-submit');
+    const btnGoogle = document.getElementById('btn-google');
+    const btnGithub = document.getElementById('btn-github');
+
     let selectedModelId = ''; 
     let lastMessageContext = '';   
     let outputLayerCounter = 1;
     let modelMetadataRegistry = {};
     
-    // Track active HTTP network requests to cancel them safely
+    // Track active HTTP network streams to abort/stop them safely
     let currentAbortController = null; 
     let isGenerating = false;
+    let isSignUpMode = false;
+    
+    // Identity Session State: Flip this to true once a user completes authentication
+    let isUserLoggedIn = false; 
+
+    // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
+    function checkGuestAccess() {
+        if (isUserLoggedIn) return true;
+
+        const currentTimestamp = Date.now();
+        const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
+
+        // 1. Check if the guest is currently locked out
+        if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
+            const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
+            
+            // Calculate accurate breakdown for hours or minutes remaining
+            const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
+            const hoursLeft = Math.floor(minutesLeftTotal / 60);
+            const minutesLeft = minutesLeftTotal % 60;
+            
+            let timeString = '';
+            if (hoursLeft > 0) {
+                timeString = `${hoursLeft}h ${minutesLeft}m`;
+            } else {
+                timeString = `${minutesLeft} minutes`;
+            }
+            
+            masterInput.disabled = true;
+            masterInput.placeholder = `Guest limit reached. Retrying available in ${timeString}. Create Account to bypass.`;
+            
+            sendBtn.disabled = true;
+            sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
+            sendBtn.innerHTML = `<span>Locked</span>`;
+            return false;
+        }
+
+        // 2. Clear out expired lockdown tokens automatically
+        if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
+            localStorage.removeItem('snx_cooldown_expiry');
+            localStorage.setItem('snx_guest_chat_count', '0');
+        }
+
+        return true;
+    }
 
     async function initializeModelMatrix() {
         try {
             const res = await fetch('/api/chat', { method: 'GET' });
             const data = await res.json();
             
-            if (!data.data || data.data.length === 0) throw new Error("Index data empty");
+            if (!data.data || data.data.length == 0) throw new Error("Index data empty");
 
+            // Filter out premium tiers and non-conversational helper filters using loose operations
             const freeChatModels = data.data.filter(model => {
-                const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) === 0);
+                const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) == 0);
                 const modelIdLower = model.id.toLowerCase();
                 const nameLower = (model.name || '').toLowerCase();
                 
@@ -75,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (isWorkingFine) {
                     btn.addEventListener('click', () => {
-                        if (isGenerating) return; // Prevent model swapping mid-generation
+                        if (isGenerating) return; 
                         document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
                             b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
                             b.classList.add('border-zinc-800', 'text-zinc-400');
@@ -101,9 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            masterInput.disabled = false;
-            masterInput.placeholder = "Type instructions for the next model layer...";
-            setButtonStateActive();
+            // Verify restrictions before lighting up input channels
+            if (checkGuestAccess()) {
+                masterInput.disabled = false;
+                masterInput.placeholder = "Type instructions for the next model layer...";
+                setButtonStateActive();
+            }
             
             statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
             statusText.textContent = `${activeOnlineCount} Layers Online`;
@@ -113,7 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setupFallbackModel();
         }
     }
-        function setupFallbackModel() {
+
+    function setupFallbackModel() {
         selectedModelId = 'openrouter/free';
         modelMetadataRegistry['openrouter/free'] = { name: 'SourNexZ Router', short: 'SNX' };
         
@@ -122,39 +182,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 SourNexZ Router
             </button>`;
             
-        masterInput.disabled = false;
-        masterInput.placeholder = "Type instructions...";
-        setButtonStateActive();
+        if (checkGuestAccess()) {
+            masterInput.disabled = false;
+            masterInput.placeholder = "Type instructions...";
+            setButtonStateActive();
+        }
         statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
         statusText.textContent = "SourNexZ Router Active";
-        }
-    
-
-    function setupFallbackModel() {
-        selectedModelId = 'openrouter/free';
-        modelMetadataRegistry['openrouter/free'] = { name: 'Universal Free Router', short: 'RTR' };
-        
-        dynamicModelDock.innerHTML = `
-            <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
-                Universal Free Router (Fail-Safe)
-            </button>`;
-            
-        masterInput.disabled = false;
-        masterInput.placeholder = "Type instructions...";
-        setButtonStateActive();
-        statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
-        statusText.textContent = "Router Fail-Safe Mode";
     }
 
-    // Toggle Button to Standard Active State
     function setButtonStateActive() {
         isGenerating = false;
         sendBtn.disabled = false;
-        sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5";
+        sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer";
         sendBtn.innerHTML = `<span>Run</span>`;
     }
 
-    // Toggle Button to Stop/Loading State with Tailwind animated spinner
     function setButtonStateLoading() {
         isGenerating = true;
         sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
@@ -216,12 +259,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
-                signal: abortSignal // Link the stop controller token straight to the HTTP call
+                signal: abortSignal 
             });
             const data = await response.json();
             return data.text || `Server Error: ${data.error}`;
         } catch (err) {
-            if (err.name === 'AbortError') {
+            if (err.name == 'AbortError') {
                 return `Generation terminated by operator. Core context detached.`;
             }
             return `Secure link failed: ${err.message}`;
@@ -229,17 +272,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleExecute() {
-        // Core addition: If currently generating, treat clicking this button as a cancel command
+        // Intercept action to abort request stream mid-transit
         if (isGenerating) {
-            if (currentAbortController) {
-                currentAbortController.abort();
-            }
+            if (currentAbortController) currentAbortController.abort();
             setButtonStateActive();
             return;
         }
 
+        // Final verification check for guest session validity
+        if (!checkGuestAccess()) return;
+
         const promptText = masterInput.value.trim();
         if (!promptText || !selectedModelId) return;
+
+        // TRACK GUEST ACCOUNTS: Increment counter arrays for non-logged in visitors
+        if (!isUserLoggedIn) {
+            let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
+            currentCount++;
+            localStorage.setItem('snx_guest_chat_count', currentCount.toString());
+
+            // If this is their 10th message, stamp the 2-hour cooldown payload
+            if (currentCount >= 10) {
+                const twoHoursInMs = 2 * 60 * 60 * 1000; 
+                const expiryTime = Date.now() + twoHoursInMs;
+                localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
+            }
+        }
 
         appendUserMessage(promptText);
         masterInput.value = ''; 
@@ -247,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const textTargetId = appendModelSkeleton(selectedModelId, promptText);
         const textTarget = document.getElementById(`${textTargetId}-text`);
 
-        // Spawn a fresh cancellation controller for this pipeline instance
         currentAbortController = new AbortController();
         setButtonStateLoading();
 
@@ -260,12 +317,64 @@ document.addEventListener('DOMContentLoaded', () => {
         
         textTarget.innerText = liveOutputText;
 
-        // Clean up internal context flags
         lastMessageContext = liveOutputText;
         outputLayerCounter++;
-        setButtonStateActive();
+        
+        // Refresh structural fields and recheck boundaries
+        if (checkGuestAccess()) {
+            setButtonStateActive();
+        }
         chatThread.scrollTop = chatThread.scrollHeight;
     }
+
+    // --- AUTHENTICATION INTERACTION MATRIX ---
+    authToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        isSignUpMode = !isSignUpMode;
+        if (isSignUpMode) {
+            authTitle.textContent = "Register New Matrix Profile";
+            btnSubmit.textContent = "Initialize Registration";
+            toggleMsg.textContent = "Already verified?";
+            authToggle.textContent = "Sign In";
+        } else {
+            authTitle.textContent = "Account Verification";
+            btnSubmit.textContent = "Verify Credentials";
+            toggleMsg.textContent = "New node initialization?";
+            authToggle.textContent = "Create Account";
+        }
+    });
+
+    authForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        // Elevate local flags to remove all limits on form submission
+        isUserLoggedIn = true;
+        authOverlay.classList.add('opacity-0', 'pointer-events-none');
+        
+        // Unlock inputs safely
+        masterInput.disabled = false;
+        masterInput.placeholder = "Type instructions for the next model layer...";
+        setButtonStateActive();
+        console.log("Session verified! Unlimited network layer mapping unlocked.");
+    });
+
+    btnGoogle.addEventListener('click', () => {
+        alert("Google OAuth sequence triggered. Bypassing lock for demonstration.");
+        isUserLoggedIn = true;
+        authOverlay.classList.add('opacity-0', 'pointer-events-none');
+        masterInput.disabled = false;
+        masterInput.placeholder = "Type instructions for the next model layer...";
+        setButtonStateActive();
+    });
+
+    btnGithub.addEventListener('click', () => {
+        alert("GitHub OAuth sequence triggered. Bypassing lock for demonstration.");
+        isUserLoggedIn = true;
+        authOverlay.classList.add('opacity-0', 'pointer-events-none');
+        masterInput.disabled = false;
+        masterInput.placeholder = "Type instructions for the next model layer...";
+        setButtonStateActive();
+    });
 
     sendBtn.addEventListener('click', handleExecute);
     masterInput.addEventListener('keydown', (e) => {
@@ -282,5 +391,8 @@ document.addEventListener('DOMContentLoaded', () => {
         chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
     };
 
+    // Initialize systems on load
+    checkGuestAccess();
     initializeModelMatrix();
 });
+        
