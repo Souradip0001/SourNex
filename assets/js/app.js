@@ -72,10 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initializeModelMatrix() {
         try {
-            const res = await fetch('/api/chat', { method: 'GET' });
-            const data = await res.json();
+                    const res = await fetch('/api/chat', { method: 'GET' });
+        const data = await res.json();
+        
+        // BULLETPROOF VALIDATION: Checks if the data array actually exists first
+        if (!data || !data.data || !Array.isArray(data.data) || data.data.length == 0) {
+            throw new Error(data.error || "Index data empty or invalid backend format");
+        }
             
-            if (!data.data || data.data.length == 0) throw new Error("Index data empty");
 
             // Filter out premium tiers and non-conversational helper filters using loose operations
             const freeChatModels = data.data.filter(model => {
