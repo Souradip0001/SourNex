@@ -32,9 +32,56 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
 </head>
 <body class="bg-luxury-dark text-zinc-100 min-h-screen flex flex-col justify-between select-none overflow-x-hidden">
+<div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+    <div class="bg-luxury-surface border border-luxury-border p-8 rounded-2xl max-w-md w-full space-y-6 shadow-gold-glow">
+        <div class="text-center space-y-2">
+            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
+                <span class="text-luxury-gold font-bold text-lg tracking-wider">S</span>
+            </div>
+            <h2 id="auth-title" class="text-sm font-semibold tracking-[0.2em] text-white uppercase pt-2">Account Verification</h2>
+            <p class="text-[11px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
+        </div>
 
+        <form id="credentials-form" class="space-y-4">
+            <div class="space-y-1">
+                <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
+                <input type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
+                <input type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+            </div>
+            <button id="btn-submit" type="submit" class="w-full py-3 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
+                Verify Credentials
+            </button>
+        </form>
+
+        <div class="relative flex py-2 items-center">
+            <div class="flex-grow border-t border-luxury-border/60"></div>
+            <span class="flex-shrink mx-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Federated Identity</span>
+            <div class="flex-grow border-t border-luxury-border/60"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                <span>Google</span>
+            </button>
+            <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                <span>GitHub</span>
+            </button>
+        </div>
+
+        <div class="text-center pt-2">
+            <span id="toggle-msg" class="text-xs text-zinc-500">New node initialization?</span>
+            <a href="#" id="auth-toggle" class="text-xs text-luxury-gold hover:underline ml-1">Create Account</a>
+        </div>
+    </div>
+</div>
+    
     <header class="border-b border-luxury-border/80 bg-luxury-dark/90 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40">
         <div class="flex items-center space-x-3">
             <div class="h-9 w-9 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center shadow-gold-glow">
