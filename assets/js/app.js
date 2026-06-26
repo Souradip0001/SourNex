@@ -1,4 +1,9 @@
+/**
+ * SOURNEX ENGINE
+ * Infrastructure: Client-Side Multi-AI Layer Mapping
+ */
 document.addEventListener('DOMContentLoaded', () => {
+    // --- UI CORE ELEMENTS ---
     const chatThread = document.getElementById('chat-thread');
     const masterInput = document.getElementById('master-input');
     const sendBtn = document.getElementById('send-btn');
@@ -16,18 +21,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnGoogle = document.getElementById('btn-google');
     const btnGithub = document.getElementById('btn-github');
 
+    // --- STATE ENGINE PARAMETERS ---
     let selectedModelId = ''; 
     let lastMessageContext = '';   
     let outputLayerCounter = 1;
     let modelMetadataRegistry = {};
     
-    // Track active HTTP network streams to abort/stop them safely
     let currentAbortController = null; 
     let isGenerating = false;
     let isSignUpMode = false;
-    
-    // Identity Session State: Flip this to true once a user completes authentication
     let isUserLoggedIn = false; 
+
+    // --- SUPABASE ENGINE INITIALIZATION ---
+    // Replace these placeholder strings with your actual Supabase Project Credentials via Vercel / Settings env maps
+    const SUPABASE_URL = "https://your-project-id.supabase.co";
+    const SUPABASE_ANON_KEY = "your-anon-public-key";
+    let supabase = null;
+
+    if (typeof supabase !== 'undefined' && SUPABASE_URL !== "https://your-project-id.supabase.co") {
+        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Automatically check if an active session persists on load
+        checkActiveSession();
+    }
+
+    async function checkActiveSession() {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            handleSessionUnlock();
+        }
+    }
 
     // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
     function checkGuestAccess() {
@@ -36,21 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentTimestamp = Date.now();
         const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
 
-        // 1. Check if the guest is currently locked out
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
-            
-            // Calculate accurate breakdown for hours or minutes remaining
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
             const hoursLeft = Math.floor(minutesLeftTotal / 60);
             const minutesLeft = minutesLeftTotal % 60;
             
-            let timeString = '';
-            if (hoursLeft > 0) {
-                timeString = `${hoursLeft}h ${minutesLeft}m`;
-            } else {
-                timeString = `${minutesLeft} minutes`;
-            }
+            let timeString = hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft} minutes`;
             
             masterInput.disabled = true;
             masterInput.placeholder = `Guest limit reached. Retrying available in ${timeString}. Create Account to bypass.`;
@@ -61,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        // 2. Clear out expired lockdown tokens automatically
         if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
@@ -70,18 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
+    // --- METADATA DIRECTORY ENGINE ---
     async function initializeModelMatrix() {
         try {
-                    const res = await fetch('/api/chat', { method: 'GET' });
-        const data = await res.json();
-        
-        // BULLETPROOF VALIDATION: Checks if the data array actually exists first
-        if (!data || !data.data || !Array.isArray(data.data) || data.data.length == 0) {
-            throw new Error(data.error || "Index data empty or invalid backend format");
-        }
+            const res = await fetch('/api/chat', { method: 'GET' });
+            const data = await res.json();
             
+            if (!data || !data.data || !Array.isArray(data.data) || data.data.length == 0) {
+                throw new Error(data.error || "Index data empty or invalid backend format");
+            }
 
-            // Filter out premium tiers and non-conversational helper filters using loose operations
             const freeChatModels = data.data.filter(model => {
                 const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) == 0);
                 const modelIdLower = model.id.toLowerCase();
@@ -161,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Verify restrictions before lighting up input channels
             if (checkGuestAccess()) {
                 masterInput.disabled = false;
                 masterInput.placeholder = "Type instructions for the next model layer...";
@@ -195,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.textContent = "SourNexZ Router Active";
     }
 
+    // --- UI RE-STATE STREAMS ---
     function setButtonStateActive() {
         isGenerating = false;
         sendBtn.disabled = false;
@@ -257,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return uniqueId;
     }
 
+    // --- PIPELINE EXECUTION ENGINE ---
     async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
         try {
             const response = await fetch('/api/chat', {
@@ -276,26 +289,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleExecute() {
-        // Intercept action to abort request stream mid-transit
         if (isGenerating) {
             if (currentAbortController) currentAbortController.abort();
             setButtonStateActive();
             return;
         }
 
-        // Final verification check for guest session validity
         if (!checkGuestAccess()) return;
 
         const promptText = masterInput.value.trim();
         if (!promptText || !selectedModelId) return;
 
-        // TRACK GUEST ACCOUNTS: Increment counter arrays for non-logged in visitors
         if (!isUserLoggedIn) {
             let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
             currentCount++;
             localStorage.setItem('snx_guest_chat_count', currentCount.toString());
 
-            // If this is their 10th message, stamp the 2-hour cooldown payload
             if (currentCount >= 10) {
                 const twoHoursInMs = 2 * 60 * 60 * 1000; 
                 const expiryTime = Date.now() + twoHoursInMs;
@@ -324,14 +333,13 @@ document.addEventListener('DOMContentLoaded', () => {
         lastMessageContext = liveOutputText;
         outputLayerCounter++;
         
-        // Refresh structural fields and recheck boundaries
         if (checkGuestAccess()) {
             setButtonStateActive();
         }
         chatThread.scrollTop = chatThread.scrollHeight;
     }
 
-    // --- AUTHENTICATION INTERACTION MATRIX ---
+    // --- AUTHENTICATION ENGINE MATRIX ---
     authToggle.addEventListener('click', (e) => {
         e.preventDefault();
         isSignUpMode = !isSignUpMode;
@@ -348,38 +356,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    authForm.addEventListener('submit', (e) => {
+    authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        // Elevate local flags to remove all limits on form submission
+        const email = authForm.querySelector('input[type="email"]').value;
+        const password = authForm.querySelector('input[type="password"]').value;
+
+        if (supabase) {
+            if (isSignUpMode) {
+                const { data, error } = await supabase.auth.signUp({ email, password });
+                if (error) return alert(`Registration Exception: ${error.message}`);
+                alert("Activation node transmitted! Verify your inbox link.");
+            } else {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) return alert(`Verification Failed: ${error.message}`);
+                handleSessionUnlock();
+            }
+        } else {
+            // Local fallback logic for validation demonstration if Supabase SDK is absent
+            handleSessionUnlock();
+        }
+    });
+
+    btnGoogle.addEventListener('click', async () => {
+        if (supabase) {
+            await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+        } else {
+            alert("Google OAuth bypassed for demonstration.");
+            handleSessionUnlock();
+        }
+    });
+
+    btnGithub.addEventListener('click', async () => {
+        if (supabase) {
+            await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin } });
+        } else {
+            alert("GitHub OAuth bypassed for demonstration.");
+            handleSessionUnlock();
+        }
+    });
+
+    function handleSessionUnlock() {
         isUserLoggedIn = true;
         authOverlay.classList.add('opacity-0', 'pointer-events-none');
-        
-        // Unlock inputs safely
         masterInput.disabled = false;
         masterInput.placeholder = "Type instructions for the next model layer...";
         setButtonStateActive();
         console.log("Session verified! Unlimited network layer mapping unlocked.");
-    });
+    }
 
-    btnGoogle.addEventListener('click', () => {
-        alert("Google OAuth sequence triggered. Bypassing lock for demonstration.");
-        isUserLoggedIn = true;
-        authOverlay.classList.add('opacity-0', 'pointer-events-none');
-        masterInput.disabled = false;
-        masterInput.placeholder = "Type instructions for the next model layer...";
-        setButtonStateActive();
-    });
-
-    btnGithub.addEventListener('click', () => {
-        alert("GitHub OAuth sequence triggered. Bypassing lock for demonstration.");
-        isUserLoggedIn = true;
-        authOverlay.classList.add('opacity-0', 'pointer-events-none');
-        masterInput.disabled = false;
-        masterInput.placeholder = "Type instructions for the next model layer...";
-        setButtonStateActive();
-    });
-
+    // --- GLOBAL EVENT REGISTRATION ---
     sendBtn.addEventListener('click', handleExecute);
     masterInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -399,4 +424,4 @@ document.addEventListener('DOMContentLoaded', () => {
     checkGuestAccess();
     initializeModelMatrix();
 });
-        
+            
