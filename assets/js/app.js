@@ -1,6 +1,6 @@
 /**
  * SOURNEX ENGINE Core Orchestration Script
- * Infrastructure: Client-Side Multi-AI Layer Mapping (Mobile-Optimized)
+ * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- UI CORE ELEMENTS ---
@@ -51,31 +51,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dockExpandTrigger) {
         dockExpandTrigger.addEventListener('click', () => {
             isDockExpanded = !isDockExpanded;
-            if (dockCollapsibleWrapper && dockChevron) {
-                if (isDockExpanded) {
-                    dockCollapsibleWrapper.style.maxHeight = "300px"; 
-                    dockChevron.style.transform = "rotate(180deg)";
-                } else {
-                    dockCollapsibleWrapper.style.maxHeight = "0px"; 
-                    dockChevron.style.transform = "rotate(0deg)";
-                }
+            if (isDockExpanded) {
+                dockCollapsibleWrapper.style.maxHeight = "300px"; 
+                dockChevron.style.transform = "rotate(180deg)";
+            } else {
+                dockCollapsibleWrapper.style.maxHeight = "0px"; 
+                dockChevron.style.transform = "rotate(0deg)";
             }
         });
     }
 
-    // --- AUTH LAYER OVERLAYS: MOBILE COMPATIBLE SHOW/HIDE ---
+    // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
     const displayAuthModal = () => {
-        if (authOverlay) {
-            authOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-            authOverlay.classList.add('flex');
-        }
+        authOverlay.classList.remove('opacity-0', 'pointer-events-none');
     };
     
     const dismissAuthModal = () => {
-        if (authOverlay) {
-            authOverlay.classList.remove('flex');
-            authOverlay.classList.add('hidden', 'opacity-0', 'pointer-events-none');
-        }
+        authOverlay.classList.add('opacity-0', 'pointer-events-none');
     };
 
     if (globalAccountBtn) globalAccountBtn.addEventListener('click', displayAuthModal);
@@ -108,16 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let timeString = hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`;
             
-            if (masterInput) {
-                masterInput.disabled = true;
-                masterInput.placeholder = `Guest quota exhausted. Cooling down (${timeString} remaining). Sign up to unlock.`;
-            }
+            masterInput.disabled = true;
+            masterInput.placeholder = `Guest quota exhausted. Cooling down (${timeString} remaining). Sign up to unlock.`;
             
-            if (sendBtn) {
-                sendBtn.disabled = true;
-                sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
-                sendBtn.innerHTML = `<span>Locked</span>`;
-            }
+            sendBtn.disabled = true;
+            sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
+            sendBtn.innerHTML = `<span>Locked</span>`;
             return false;
         }
 
@@ -157,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (dynamicModelDock) dynamicModelDock.innerHTML = ''; 
+            dynamicModelDock.innerHTML = ''; 
             let functionalModelSelected = false;
             let activeOnlineCount = 0;
 
@@ -203,14 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectedModelId = model.id;
                     });
 
-                    if (dynamicModelDock) dynamicModelDock.appendChild(btn);
+                    dynamicModelDock.appendChild(btn);
 
                     if (!functionalModelSelected) {
                         btn.click();
                         functionalModelSelected = true;
                     }
                 } else {
-                    if (dynamicModelDock) dynamicModelDock.appendChild(btn);
+                    dynamicModelDock.appendChild(btn);
                 }
             });
 
@@ -219,18 +207,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (dockCounterBadge) dockCounterBadge.textContent = activeOnlineCount;
+            dockCounterBadge.textContent = activeOnlineCount;
 
             if (checkGuestAccess()) {
-                if (masterInput) {
-                    masterInput.disabled = false;
-                    masterInput.placeholder = "Type instructions for the next model layer...";
-                }
+                masterInput.disabled = false;
+                masterInput.placeholder = "Type instructions for the next model layer...";
                 setButtonStateActive();
             }
             
-            if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
-            if (statusText) statusText.textContent = `${activeOnlineCount} Layers Online`;
+            statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+            statusText.textContent = `${activeOnlineCount} Layers Online`;
 
         } catch (err) {
             console.error("Matrix compilation failed, falling back to router wrapper:", err);
@@ -242,33 +228,85 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedModelId = 'openrouter/free';
         modelMetadataRegistry['openrouter/free'] = { name: 'SourNexZ Router', short: 'SNX' };
         
-        if (dynamicModelDock) {
-            dynamicModelDock.innerHTML = `
-                <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
-                    SourNexZ Router
-                </button>`;
-        }
+        dynamicModelDock.innerHTML = `
+            <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
+                SourNexZ Router
+            </button>`;
             
-        if (dockCounterBadge) dockCounterBadge.textContent = "1";
+        dockCounterBadge.textContent = "1";
 
         if (checkGuestAccess()) {
-            if (masterInput) {
-                masterInput.disabled = false;
-                masterInput.placeholder = "Type instructions...";
-            }
+            masterInput.disabled = false;
+            masterInput.placeholder = "Type instructions...";
             setButtonStateActive();
         }
-        if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
-        if (statusText) statusText.textContent = "SourNexZ Router Active";
+        statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
+        statusText.textContent = "SourNexZ Router Active";
     }
 
     // --- UI RE-STATE STREAMS ---
     function setButtonStateActive() {
-        if (!sendBtn) return;
         isGenerating = false;
         sendBtn.disabled = false;
         sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer";
         sendBtn.innerHTML = `<span>Run</span>`;
+    }
+
+    function setButtonStateLoading() {
+        isGenerating = true;
+        sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
+        sendBtn.innerHTML = `
+            <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Stop</span>`;
+    }
+
+    function appendUserMessage(text) {
+        if (emptyState) emptyState.remove();
+
+        const userHtml = `
+            <div class="flex items-start space-x-4 justify-end animate-fade-in mb-4">
+                <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
+                    <p class="text-xs text-zinc-500 tracking-wider uppercase mb-1">User Prompt</p>
+                    <p class="text-sm text-white leading-relaxed">${text}</p>
+                </div>
+                <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
+            </div>`;
+        chatThread.insertAdjacentHTML('beforeend', userHtml);
+        chatThread.scrollTop = chatThread.scrollHeight;
+    }
+
+    function appendModelSkeleton(modelKey, userPrompt) {
+        const conf = modelMetadataRegistry[modelKey] || { name: 'Unknown Target Node', short: 'AI' };
+        const uniqueId = `seq-${Date.now()}`;
+        const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
+
+        const modelHtml = `
+            <div class="flex items-start space-x-4 animate-fade-in mb-4">
+                <div class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
+                <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
+                    <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
+                        <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
+                        <button onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
+                            <span>Inspect Layer ${outputLayerCounter}</span>
+                            <svg id="chev-${uniqueId}" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <div id="meta-${uniqueId}" class="hidden mb-3 p-2.5 bg-luxury-dark/60 border border-luxury-border/60 rounded-lg text-[11px] font-mono text-zinc-400 space-y-1">
+                        <div><span class="text-luxury-gold/70">Instruction:</span> "${userPrompt}"</div>
+                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span class="text-zinc-500">${modelKey}</span></div>
+                        <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
+                    </div>
+                    <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
+                        <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
+                    </p>
+                </div>
+            </div>`;
+        chatThread.insertAdjacentHTML('beforeend', modelHtml);
+        chatThread.scrollTop = chatThread.scrollHeight;
+        return uniqueId;
     }
 
     // --- PIPELINE EXECUTION ENGINE ---
@@ -299,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!checkGuestAccess()) return;
 
-        const promptText = masterInput ? masterInput.value.trim() : '';
+        const promptText = masterInput.value.trim();
         if (!promptText || !selectedModelId) return;
 
         if (!isUserLoggedIn) {
@@ -314,50 +352,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (emptyState) emptyState.remove();
+        appendUserMessage(promptText);
+        masterInput.value = ''; 
 
-        // FIX 1: Fixed the broken 'text' variable error. Now it maps explicitly to promptText.
-        const userHtml = `
-            <div class="flex items-start space-x-4 justify-end animate-fade-in mb-4">
-                <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
-                    <p class="text-xs text-zinc-500 tracking-wider uppercase mb-1">User Prompt</p>
-                    <p class="text-sm text-white leading-relaxed">${promptText}</p>
-                </div>
-                <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
-            </div>`;
-        if (chatThread) {
-            chatThread.insertAdjacentHTML('beforeend', userHtml);
-            chatThread.scrollTop = chatThread.scrollHeight;
-        }
-        if (masterInput) masterInput.value = ''; 
-
-        const conf = modelMetadataRegistry[selectedModelId] || { name: 'Unknown Target Node', short: 'AI' };
-        const uniqueId = `seq-${Date.now()}`;
-        
-        const modelHtml = `
-            <div class="flex items-start space-x-4 animate-fade-in mb-4">
-                <div class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
-                <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
-                    <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
-                        <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
-                    </div>
-                    <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
-                        <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
-                    </p>
-                </div>
-            </div>`;
-        if (chatThread) {
-            chatThread.insertAdjacentHTML('beforeend', modelHtml);
-            chatThread.scrollTop = chatThread.scrollHeight;
-        }
-        const textTarget = document.getElementById(`${uniqueId}-text`);
+        const textTargetId = appendModelSkeleton(selectedModelId, promptText);
+        const textTarget = document.getElementById(`${textTargetId}-text`);
 
         currentAbortController = new AbortController();
-        if (sendBtn) {
-            isGenerating = true;
-            sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
-            sendBtn.innerHTML = `<span>Stop</span>`;
-        }
+        setButtonStateLoading();
 
         const liveOutputText = await fetchLiveAIResponse(
             selectedModelId, 
@@ -374,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (checkGuestAccess()) {
             setButtonStateActive();
         }
-        if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
+        chatThread.scrollTop = chatThread.scrollHeight;
     }
 
     // --- AUTHENTICATION INTERFACE FORM TOGGLE ---
@@ -383,20 +385,19 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             isSignUpMode = !isSignUpMode;
             if (isSignUpMode) {
-                if (authTitle) authTitle.textContent = "Register New Matrix Profile";
-                if (btnSubmit) btnSubmit.textContent = "Initialize Registration";
-                if (toggleMsg) toggleMsg.textContent = "Already verified?";
+                authTitle.textContent = "Register New Matrix Profile";
+                btnSubmit.textContent = "Initialize Registration";
+                toggleMsg.textContent = "Already verified?";
                 authToggle.textContent = "Sign In";
             } else {
-                if (authTitle) authTitle.textContent = "Account Verification";
-                if (btnSubmit) btnSubmit.textContent = "Verify Credentials";
-                if (toggleMsg) toggleMsg.textContent = "New node initialization?";
+                authTitle.textContent = "Account Verification";
+                btnSubmit.textContent = "Verify Credentials";
+                toggleMsg.textContent = "New node initialization?";
                 authToggle.textContent = "Create Account";
             }
         });
     }
 
-    
     if (authForm) {
         authForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -410,31 +411,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSessionUnlock() {
         isUserLoggedIn = true;
         dismissAuthModal();
-        if (masterInput) {
-            masterInput.disabled = false;
-            masterInput.placeholder = "Type instructions for the next model layer...";
-        }
+        masterInput.disabled = false;
+        masterInput.placeholder = "Type instructions for the next model layer...";
         setButtonStateActive();
         
-        if (accountStatusDot) accountStatusDot.className = "h-2 w-2 rounded-full bg-luxury-gold shadow-gold-glow animate-pulse";
-        if (accountStatusLabel) accountStatusLabel.textContent = "Verified Profile";
+        accountStatusDot.className = "h-2 w-2 rounded-full bg-luxury-gold shadow-gold-glow animate-pulse";
+        accountStatusLabel.textContent = "Verified Profile";
     }
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
     
-    
-    if (masterInput) {
-        masterInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleExecute();
-            }
-        });
-    }
-
-    // Initialize systems on load
-    checkGuestAccess();
-    initializeModelMatrix();
-});
-            
+    // FIXED: Completed the broken keydown snippet securely
+  
