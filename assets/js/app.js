@@ -1,6 +1,6 @@
 /**
  * SOURNEX ENGINE Core Orchestration Script
- * Infrastructure: Client-Side Multi-AI Layer Mapping (Mobile-Optimized)
+ * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- UI CORE ELEMENTS ---
@@ -51,30 +51,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dockExpandTrigger) {
         dockExpandTrigger.addEventListener('click', () => {
             isDockExpanded = !isDockExpanded;
-            if (dockCollapsibleWrapper && dockChevron) {
-                if (isDockExpanded) {
-                    dockCollapsibleWrapper.style.maxHeight = "300px"; 
-                    dockChevron.style.transform = "rotate(180deg)";
-                } else {
-                    dockCollapsibleWrapper.style.maxHeight = "0px"; 
-                    dockChevron.style.transform = "rotate(0deg)";
-                }
+            if (isDockExpanded) {
+                dockCollapsibleWrapper.style.maxHeight = "300px"; 
+                dockChevron.style.transform = "rotate(180deg)";
+            } else {
+                dockCollapsibleWrapper.style.maxHeight = "0px"; 
+                dockChevron.style.transform = "rotate(0deg)";
             }
         });
     }
 
-    // --- AUTH LAYER OVERLAYS: MOBILE COMPATIBLE SHOW/HIDE ---
+    // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
     const displayAuthModal = () => {
         if (authOverlay) {
-            authOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-            authOverlay.classList.add('flex');
+            authOverlay.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
+            authOverlay.classList.add('pointer-events-auto', 'flex');
         }
     };
     
     const dismissAuthModal = () => {
         if (authOverlay) {
-            authOverlay.classList.remove('flex');
-            authOverlay.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+            authOverlay.classList.remove('pointer-events-auto', 'flex');
+            authOverlay.classList.add('opacity-0', 'pointer-events-none', 'hidden');
         }
     };
 
@@ -271,6 +269,68 @@ document.addEventListener('DOMContentLoaded', () => {
         sendBtn.innerHTML = `<span>Run</span>`;
     }
 
+    function setButtonStateLoading() {
+        if (!sendBtn) return;
+        isGenerating = true;
+        sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
+        sendBtn.innerHTML = `
+            <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Stop</span>`;
+    }
+
+    function appendUserMessage(text) {
+        if (emptyState) emptyState.remove();
+
+        const userHtml = `
+            <div class="flex items-start space-x-4 justify-end animate-fade-in mb-4">
+                <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
+                    <p class="text-xs text-zinc-500 tracking-wider uppercase mb-1">User Prompt</p>
+                    <p class="text-sm text-white leading-relaxed">${text}</p>
+                </div>
+                <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
+            </div>`;
+        if (chatThread) {
+            chatThread.insertAdjacentHTML('beforeend', userHtml);
+            chatThread.scrollTop = chatThread.scrollHeight;
+        }
+    }
+
+    function appendModelSkeleton(modelKey, userPrompt) {
+        const conf = modelMetadataRegistry[modelKey] || { name: 'Unknown Target Node', short: 'AI' };
+        const uniqueId = `seq-${Date.now()}`;
+        const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
+
+        const modelHtml = `
+            <div class="flex items-start space-x-4 animate-fade-in mb-4">
+                <div class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
+                <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
+                    <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
+                        <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
+                        <button onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
+                            <span>Inspect Layer ${outputLayerCounter}</span>
+                            <svg id="chev-${uniqueId}" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <div id="meta-${uniqueId}" class="hidden mb-3 p-2.5 bg-luxury-dark/60 border border-luxury-border/60 rounded-lg text-[11px] font-mono text-zinc-400 space-y-1">
+                        <div><span class="text-luxury-gold/70">Instruction:</span> "${userPrompt}"</div>
+                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span class="text-zinc-500">${modelKey}</span></div>
+                        <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
+                    </div>
+                    <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
+                        <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
+                    </p>
+                </div>
+            </div>`;
+        if (chatThread) {
+            chatThread.insertAdjacentHTML('beforeend', modelHtml);
+            chatThread.scrollTop = chatThread.scrollHeight;
+        }
+        return uniqueId;
+    }
+
     // --- PIPELINE EXECUTION ENGINE ---
     async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
         try {
@@ -314,50 +374,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (emptyState) emptyState.remove();
-
-        const userHtml = `
-            <div class="flex items-start space-x-4 justify-end animate-fade-in">
-                <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
-                    <p class="text-xs text-zinc-500 tracking-wider uppercase mb-1">User Prompt</p>
-                    <p class="text-sm text-white leading-relaxed">${text}</p>
-                </div>
-                <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
-            </div>`;
-        if (chatThread) {
-            chatThread.insertAdjacentHTML('beforeend', userHtml);
-            chatThread.scrollTop = chatThread.scrollHeight;
-        }
+        appendUserMessage(promptText);
         if (masterInput) masterInput.value = ''; 
 
-        const conf = modelMetadataRegistry[selectedModelId] || { name: 'Unknown Target Node', short: 'AI' };
-        const uniqueId = `seq-${Date.now()}`;
-        const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
-
-        const modelHtml = `
-            <div class="flex items-start space-x-4 animate-fade-in">
-                <div class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
-                <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
-                    <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
-                        <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
-                    </div>
-                    <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
-                        <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
-                    </p>
-                </div>
-            </div>`;
-        if (chatThread) {
-            chatThread.insertAdjacentHTML('beforeend', modelHtml);
-            chatThread.scrollTop = chatThread.scrollHeight;
-        }
-        const textTarget = document.getElementById(`${uniqueId}-text`);
+        const textTargetId = appendModelSkeleton(selectedModelId, promptText);
+        const textTarget = document.getElementById(`${textTargetId}-text`);
 
         currentAbortController = new AbortController();
-        if (sendBtn) {
-            isGenerating = true;
-            sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
-            sendBtn.innerHTML = `<span>Stop</span>`;
-        }
+        setButtonStateLoading();
 
         const liveOutputText = await fetchLiveAIResponse(
             selectedModelId, 
@@ -368,7 +392,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (textTarget) textTarget.innerText = liveOutputText;
 
-        lastMessageContext = liveOutputText;
+        // FIX: Context Guard Filter
+        // Only inherit context if it's a valid structural string and does not contain server/abort exceptions
+        if (
+            liveOutputText && 
+            !liveOutputText.includes("Server Error:") && 
+            !liveOutputText.includes("Gateway exception") && 
+            !liveOutputText.includes("Generation terminated by operator") && 
+            !liveOutputText.includes("Secure link failed:")
+        ) {
+            lastMessageContext = liveOutputText;
+        } else {
+            console.log("Exception stream detected. Retaining clean historical context layer.");
+        }
+
         outputLayerCounter++;
         
         if (checkGuestAccess()) {
@@ -376,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
+    
 
     // --- AUTHENTICATION INTERFACE FORM TOGGLE ---
     if (authToggle) {
@@ -421,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
+    
     if (masterInput) {
         masterInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -431,7 +470,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize systems on load
+    displayAuthModal(); 
     checkGuestAccess();
     initializeModelMatrix();
 });
-            
+
+// Global Function Injection for the metadata inspection feature
+window.toggleMetadata = function(id) {
+    const metaCard = document.getElementById(`meta-${id}`);
+    const chevron = document.getElementById(`chev-${id}`);
+    if (metaCard) {
+        if (metaCard.classList.contains('hidden')) {
+            metaCard.classList.remove('hidden');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        } else {
+            metaCard.classList.add('hidden');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+};

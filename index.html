@@ -34,11 +34,9 @@
 </head>
 <body class="bg-luxury-dark text-zinc-300 h-screen flex flex-col justify-between overflow-hidden select-none">
 
-    <!-- SOURNEX GLOBAL AUTHENTICATION OVERLAY LAYER -->
     <div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
         <div class="relative bg-luxury-surface border border-luxury-border p-8 rounded-2xl max-w-md w-full space-y-6 shadow-gold-glow">
             
-            <!-- DISMISS CLOSE BUTTON (X) -->
             <button id="auth-close-btn" class="absolute top-4 right-4 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -94,7 +92,6 @@
         </div>
     </div>
 
-    <!-- MAIN HEADER BAR -->
     <header class="border-b border-luxury-border bg-luxury-dark/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40">
         <div class="flex items-center space-x-3">
             <span class="text-xs tracking-[0.3em] font-bold text-white uppercase bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">SourNexZ Workspace</span>
@@ -114,19 +111,16 @@
         </div>
     </header>
 
-    <!-- CONTENT THREAD AREA -->
-    <main class="flex-1 overflow-y-auto px-6 py-8 space-y-6 max-w-4xl w-full mx-auto" id="chat-thread">
+    <main class="flex-1 overflow-y-auto px-6 pt-8 pb-36 space-y-6 max-w-4xl w-full mx-auto" id="chat-thread">
         <div class="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-40 py-12" id="empty-state">
             <p class="text-sm tracking-widest uppercase font-mono text-zinc-500">Workspace Stream Matrix Cleared</p>
             <p class="text-xs text-zinc-600 max-w-xs leading-relaxed">Select an active LLM pipeline configuration dock layout at the bottom to inject code prompts securely.</p>
         </div>
     </main>
 
-    <!-- CONTROL FOOTER LAYOUT -->
     <footer class="border-t border-luxury-border bg-luxury-surface/80 backdrop-blur-md px-6 py-4 sticky bottom-0 z-40">
         <div class="max-w-4xl w-full mx-auto space-y-3">
             
-            <!-- MODEL ACCORDION -->
             <div class="space-y-2 w-full border border-luxury-border bg-luxury-surface/40 p-3 rounded-xl shadow-inner">
                 <div class="flex items-center justify-between cursor-pointer select-none" id="dock-expand-trigger">
                     <p class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase flex items-center space-x-2">
@@ -147,7 +141,6 @@
                 </div>
             </div>
 
-            <!-- TERMINAL INPUT CONSOLE -->
             <div class="relative bg-luxury-dark/90 border border-luxury-border rounded-xl focus-within:border-luxury-gold/40 transition-all duration-200 shadow-inner flex items-center p-2 pl-4">
                 <textarea 
                     id="master-input"
