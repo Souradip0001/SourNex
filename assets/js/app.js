@@ -62,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
-    // FIX: Force clear 'pointer-events-none' and inject 'pointer-events-auto' so mobile clicks work
     const displayAuthModal = () => {
         if (authOverlay) {
             authOverlay.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
@@ -415,4 +414,64 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (authTitle) authTitle.textContent = "Account Verification";
                 if (btnSubmit) btnSubmit.textContent = "Verify Credentials";
-         
+                if (toggleMsg) toggleMsg.textContent = "New node initialization?";
+                authToggle.textContent = "Create Account";
+            }
+        });
+    }
+
+    if (authForm) {
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSessionUnlock();
+        });
+    }
+
+    if (btnGoogle) btnGoogle.addEventListener('click', handleSessionUnlock);
+    if (btnGithub) btnGithub.addEventListener('click', handleSessionUnlock);
+
+    function handleSessionUnlock() {
+        isUserLoggedIn = true;
+        dismissAuthModal();
+        if (masterInput) {
+            masterInput.disabled = false;
+            masterInput.placeholder = "Type instructions for the next model layer...";
+        }
+        setButtonStateActive();
+        
+        if (accountStatusDot) accountStatusDot.className = "h-2 w-2 rounded-full bg-luxury-gold shadow-gold-glow animate-pulse";
+        if (accountStatusLabel) accountStatusLabel.textContent = "Verified Profile";
+    }
+
+    // --- GLOBAL EVENT REGISTRATION ---
+    if (sendBtn) sendBtn.addEventListener('click', handleExecute);
+    
+    if (masterInput) {
+        masterInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleExecute();
+            }
+        });
+    }
+
+    // Initialize systems on load
+    displayAuthModal(); 
+    checkGuestAccess();
+    initializeModelMatrix();
+});
+
+// Global Function Injection for the metadata inspection feature
+window.toggleMetadata = function(id) {
+    const metaCard = document.getElementById(`meta-${id}`);
+    const chevron = document.getElementById(`chev-${id}`);
+    if (metaCard) {
+        if (metaCard.classList.contains('hidden')) {
+            metaCard.classList.remove('hidden');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        } else {
+            metaCard.classList.add('hidden');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+};
