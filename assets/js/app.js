@@ -1,5 +1,5 @@
 /**
- * SOURNEX ENGINE
+ * SOURNEX ENGINE Core Orchestration Script
  * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dynamicModelDock = document.getElementById('dynamic-model-dock');
     const statusGlow = document.getElementById('engine-status-glow');
     const statusText = document.getElementById('engine-status-text');
+    const emptyState = document.getElementById('empty-state');
 
     // --- SOURNEX AUTHENTICATION UI ELEMENTS ---
     const authOverlay = document.getElementById('auth-overlay');
@@ -20,6 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSubmit = document.getElementById('btn-submit');
     const btnGoogle = document.getElementById('btn-google');
     const btnGithub = document.getElementById('btn-github');
+    const authCloseBtn = document.getElementById('auth-close-btn');
+    const authGuestBypass = document.getElementById('auth-guest-bypass');
+
+    // --- ACCORDION COMPONENT UI ELEMENTS ---
+    const dockExpandTrigger = document.getElementById('dock-expand-trigger');
+    const dockCollapsibleWrapper = document.getElementById('dock-collapsible-wrapper');
+    const dockChevron = document.getElementById('dock-chevron');
+    const dockCounterBadge = document.getElementById('dock-counter-badge');
+
+    // --- GLOBAL TOPBAR ACCOUNT ACTIONS ---
+    const globalAccountBtn = document.getElementById('global-account-btn');
+    const accountStatusDot = document.getElementById('account-status-dot');
+    const accountStatusLabel = document.getElementById('account-status-label');
 
     // --- STATE ENGINE PARAMETERS ---
     let selectedModelId = ''; 
@@ -31,26 +45,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let isGenerating = false;
     let isSignUpMode = false;
     let isUserLoggedIn = false; 
+    let isDockExpanded = false;
 
-    // --- SUPABASE ENGINE INITIALIZATION ---
-    // Replace these placeholder strings with your actual Supabase Project Credentials via Vercel / Settings env maps
-    const SUPABASE_URL = "https://your-project-id.supabase.co";
-    const SUPABASE_ANON_KEY = "your-anon-public-key";
-    let supabase = null;
-
-    if (typeof supabase !== 'undefined' && SUPABASE_URL !== "https://your-project-id.supabase.co") {
-        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // Automatically check if an active session persists on load
-        checkActiveSession();
-    }
-
-    async function checkActiveSession() {
-        if (!supabase) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            handleSessionUnlock();
+    // --- SOURNEX ACCORDION CONTROL SLIDER ---
+    dockExpandTrigger.addEventListener('click', () => {
+        isDockExpanded = !isDockExpanded;
+        if (isDockExpanded) {
+            dockCollapsibleWrapper.style.maxHeight = "300px"; 
+            dockChevron.style.transform = "rotate(180deg)";
+        } else {
+            dockCollapsibleWrapper.style.maxHeight = "0px"; 
+            dockChevron.style.transform = "rotate(0deg)";
         }
-    }
+    });
+
+    // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
+    const displayAuthModal = () => {
+        authOverlay.classList.remove('opacity-0', 'pointer-events-none');
+    };
+    
+    const dismissAuthModal = () => {
+        authOverlay.classList.add('opacity-0', 'pointer-events-none');
+    };
+
+    globalAccountBtn.addEventListener('click', displayAuthModal);
+    authCloseBtn.addEventListener('click', dismissAuthModal);
+    authGuestBypass.addEventListener('click', (e) => {
+        e.preventDefault();
+        dismissAuthModal();
+    });
 
     // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
     function checkGuestAccess() {
@@ -58,6 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentTimestamp = Date.now();
         const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
+        let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
+
+        // Update overlay bypass messaging text proactively on every calculation run
+        const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
+        authGuestBypass.textContent = `Continue as Guest (${allocatedPromptsRemaining} Prompts Left)`;
 
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
@@ -65,10 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const hoursLeft = Math.floor(minutesLeftTotal / 60);
             const minutesLeft = minutesLeftTotal % 60;
             
-            let timeString = hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft} minutes`;
+            let timeString = hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`;
             
             masterInput.disabled = true;
-            masterInput.placeholder = `Guest limit reached. Retrying available in ${timeString}. Create Account to bypass.`;
+            masterInput.placeholder = `Guest quota exhausted. Cooling down (${timeString} remaining). Sign up to unlock.`;
             
             sendBtn.disabled = true;
             sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
@@ -79,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
+            authGuestBypass.textContent = "Continue as Guest (10 Prompts Left)";
         }
 
         return true;
@@ -173,6 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            dockCounterBadge.textContent = activeOnlineCount;
+
             if (checkGuestAccess()) {
                 masterInput.disabled = false;
                 masterInput.placeholder = "Type instructions for the next model layer...";
@@ -197,6 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 SourNexZ Router
             </button>`;
             
+        dockCounterBadge.textContent = "1";
+
         if (checkGuestAccess()) {
             masterInput.disabled = false;
             masterInput.placeholder = "Type instructions...";
@@ -226,6 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function appendUserMessage(text) {
+        if (emptyState) emptyState.remove();
+
         const userHtml = `
             <div class="flex items-start space-x-4 justify-end animate-fade-in">
                 <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
@@ -339,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatThread.scrollTop = chatThread.scrollHeight;
     }
 
-    // --- AUTHENTICATION ENGINE MATRIX ---
+    // --- AUTHENTICATION INTERFACE FORM TOGGLE ---
     authToggle.addEventListener('click', (e) => {
         e.preventDefault();
         isSignUpMode = !isSignUpMode;
@@ -356,51 +391,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    authForm.addEventListener('submit', async (e) => {
+    authForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = authForm.querySelector('input[type="email"]').value;
-        const password = authForm.querySelector('input[type="password"]').value;
-
-        if (supabase) {
-            if (isSignUpMode) {
-                const { data, error } = await supabase.auth.signUp({ email, password });
-                if (error) return alert(`Registration Exception: ${error.message}`);
-                alert("Activation node transmitted! Verify your inbox link.");
-            } else {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) return alert(`Verification Failed: ${error.message}`);
-                handleSessionUnlock();
-            }
-        } else {
-            // Local fallback logic for validation demonstration if Supabase SDK is absent
-            handleSessionUnlock();
-        }
+        // Setup point for direct integration with `supabase.auth` pipelines later
+        handleSessionUnlock();
     });
 
-    btnGoogle.addEventListener('click', async () => {
-        if (supabase) {
-            await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-        } else {
-            alert("Google OAuth bypassed for demonstration.");
-            handleSessionUnlock();
-        }
+    btnGoogle.addEventListener('click', () => {
+        handleSessionUnlock();
     });
 
-    btnGithub.addEventListener('click', async () => {
-        if (supabase) {
-            await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin } });
-        } else {
-            alert("GitHub OAuth bypassed for demonstration.");
-            handleSessionUnlock();
-        }
+    btnGithub.addEventListener('click', () => {
+        handleSessionUnlock();
     });
 
     function handleSessionUnlock() {
         isUserLoggedIn = true;
-        authOverlay.classList.add('opacity-0', 'pointer-events-none');
+        dismissAuthModal();
         masterInput.disabled = false;
         masterInput.placeholder = "Type instructions for the next model layer...";
         setButtonStateActive();
+        
+        // Reflect premium authentication state across the main global profile header
+        accountStatusDot.className = "h-2 w-2 rounded-full bg-luxury-gold shadow-gold-glow animate-pulse";
+        accountStatusLabel.textContent = "Verified Profile";
         console.log("Session verified! Unlimited network layer mapping unlocked.");
     }
 
@@ -408,20 +422,4 @@ document.addEventListener('DOMContentLoaded', () => {
     sendBtn.addEventListener('click', handleExecute);
     masterInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleExecute();
-        }
-    });
-
-    window.toggleMetadata = (id) => {
-        const panel = document.getElementById(`meta-${id}`);
-        const chevron = document.getElementById(`chev-${id}`);
-        panel.classList.toggle('hidden');
-        chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-    };
-
-    // Initialize systems on load
-    checkGuestAccess();
-    initializeModelMatrix();
-});
-            
+            e.prevent
