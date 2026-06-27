@@ -48,32 +48,36 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDockExpanded = false;
 
     // --- SOURNEX ACCORDION CONTROL SLIDER ---
-    dockExpandTrigger.addEventListener('click', () => {
-        isDockExpanded = !isDockExpanded;
-        if (isDockExpanded) {
-            dockCollapsibleWrapper.style.maxHeight = "300px"; 
-            dockChevron.style.transform = "rotate(180deg)";
-        } else {
-            dockCollapsibleWrapper.style.maxHeight = "0px"; 
-            dockChevron.style.transform = "rotate(0deg)";
-        }
-    });
+    if (dockExpandTrigger && dockCollapsibleWrapper && dockChevron) {
+        dockExpandTrigger.addEventListener('click', () => {
+            isDockExpanded = !isDockExpanded;
+            if (isDockExpanded) {
+                dockCollapsibleWrapper.style.maxHeight = "300px"; 
+                dockChevron.style.transform = "rotate(180deg)";
+            } else {
+                dockCollapsibleWrapper.style.maxHeight = "0px"; 
+                dockChevron.style.transform = "rotate(0deg)";
+            }
+        });
+    }
 
     // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
     const displayAuthModal = () => {
-        authOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        if (authOverlay) authOverlay.classList.remove('opacity-0', 'pointer-events-none');
     };
     
     const dismissAuthModal = () => {
-        authOverlay.classList.add('opacity-0', 'pointer-events-none');
+        if (authOverlay) authOverlay.classList.add('opacity-0', 'pointer-events-none');
     };
 
-    globalAccountBtn.addEventListener('click', displayAuthModal);
-    authCloseBtn.addEventListener('click', dismissAuthModal);
-    authGuestBypass.addEventListener('click', (e) => {
-        e.preventDefault();
-        dismissAuthModal();
-    });
+    if (globalAccountBtn) globalAccountBtn.addEventListener('click', displayAuthModal);
+    if (authCloseBtn) authCloseBtn.addEventListener('click', dismissAuthModal);
+    if (authGuestBypass) {
+        authGuestBypass.addEventListener('click', (e) => {
+            e.preventDefault();
+            dismissAuthModal();
+        });
+    }
 
     // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
     function checkGuestAccess() {
@@ -83,9 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
         let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
 
-        // Update overlay bypass messaging text proactively on every calculation run
         const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
-        authGuestBypass.textContent = `Continue as Guest (${allocatedPromptsRemaining} Prompts Left)`;
+        if (authGuestBypass) {
+            authGuestBypass.textContent = `Continue as Guest (${allocatedPromptsRemaining} Prompts Left)`;
+        }
 
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
@@ -95,19 +100,23 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let timeString = hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`;
             
-            masterInput.disabled = true;
-            masterInput.placeholder = `Guest quota exhausted. Cooling down (${timeString} remaining). Sign up to unlock.`;
+            if (masterInput) {
+                masterInput.disabled = true;
+                masterInput.placeholder = `Guest quota exhausted. Cooling down (${timeString} remaining). Sign up to unlock.`;
+            }
             
-            sendBtn.disabled = true;
-            sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
-            sendBtn.innerHTML = `<span>Locked</span>`;
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
+                sendBtn.innerHTML = `<span>Locked</span>`;
+            }
             return false;
         }
 
         if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
-            authGuestBypass.textContent = "Continue as Guest (10 Prompts Left)";
+            if (authGuestBypass) authGuestBypass.textContent = "Continue as Guest (10 Prompts Left)";
         }
 
         return true;
@@ -140,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            dynamicModelDock.innerHTML = ''; 
+            if (dynamicModelDock) dynamicModelDock.innerHTML = ''; 
             let functionalModelSelected = false;
             let activeOnlineCount = 0;
 
@@ -186,14 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectedModelId = model.id;
                     });
 
-                    dynamicModelDock.appendChild(btn);
+                    if (dynamicModelDock) dynamicModelDock.appendChild(btn);
 
                     if (!functionalModelSelected) {
                         btn.click();
                         functionalModelSelected = true;
                     }
                 } else {
-                    dynamicModelDock.appendChild(btn);
+                    if (dynamicModelDock) dynamicModelDock.appendChild(btn);
                 }
             });
 
@@ -202,16 +211,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            dockCounterBadge.textContent = activeOnlineCount;
+            if (dockCounterBadge) dockCounterBadge.textContent = activeOnlineCount;
 
             if (checkGuestAccess()) {
-                masterInput.disabled = false;
-                masterInput.placeholder = "Type instructions for the next model layer...";
+                if (masterInput) {
+                    masterInput.disabled = false;
+                    masterInput.placeholder = "Type instructions for the next model layer...";
+                }
                 setButtonStateActive();
             }
             
-            statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
-            statusText.textContent = `${activeOnlineCount} Layers Online`;
+            if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+            if (statusText) statusText.textContent = `${activeOnlineCount} Layers Online`;
 
         } catch (err) {
             console.error("Matrix compilation failed, falling back to router wrapper:", err);
@@ -223,24 +234,29 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedModelId = 'openrouter/free';
         modelMetadataRegistry['openrouter/free'] = { name: 'SourNexZ Router', short: 'SNX' };
         
-        dynamicModelDock.innerHTML = `
-            <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
-                SourNexZ Router
-            </button>`;
+        if (dynamicModelDock) {
+            dynamicModelDock.innerHTML = `
+                <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
+                    SourNexZ Router
+                </button>`;
+        }
             
-        dockCounterBadge.textContent = "1";
+        if (dockCounterBadge) dockCounterBadge.textContent = "1";
 
         if (checkGuestAccess()) {
-            masterInput.disabled = false;
-            masterInput.placeholder = "Type instructions...";
+            if (masterInput) {
+                masterInput.disabled = false;
+                masterInput.placeholder = "Type instructions...";
+            }
             setButtonStateActive();
         }
-        statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
-        statusText.textContent = "SourNexZ Router Active";
+        if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
+        if (statusText) statusText.textContent = "SourNexZ Router Active";
     }
 
     // --- UI RE-STATE STREAMS ---
     function setButtonStateActive() {
+        if (!sendBtn) return;
         isGenerating = false;
         sendBtn.disabled = false;
         sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer";
@@ -248,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setButtonStateLoading() {
+        if (!sendBtn) return;
         isGenerating = true;
         sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
         sendBtn.innerHTML = `
@@ -269,8 +286,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
             </div>`;
-        chatThread.insertAdjacentHTML('beforeend', userHtml);
-        chatThread.scrollTop = chatThread.scrollHeight;
+        if (chatThread) {
+            chatThread.insertAdjacentHTML('beforeend', userHtml);
+            chatThread.scrollTop = chatThread.scrollHeight;
+        }
     }
 
     function appendModelSkeleton(modelKey, userPrompt) {
@@ -299,8 +318,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </p>
                 </div>
             </div>`;
-        chatThread.insertAdjacentHTML('beforeend', modelHtml);
-        chatThread.scrollTop = chatThread.scrollHeight;
+        if (chatThread) {
+            chatThread.insertAdjacentHTML('beforeend', modelHtml);
+            chatThread.scrollTop = chatThread.scrollHeight;
+        }
         return uniqueId;
     }
 
@@ -332,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!checkGuestAccess()) return;
 
-        const promptText = masterInput.value.trim();
+        const promptText = masterInput ? masterInput.value.trim() : '';
         if (!promptText || !selectedModelId) return;
 
         if (!isUserLoggedIn) {
@@ -348,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         appendUserMessage(promptText);
-        masterInput.value = ''; 
+        if (masterInput) masterInput.value = ''; 
 
         const textTargetId = appendModelSkeleton(selectedModelId, promptText);
         const textTarget = document.getElementById(`${textTargetId}-text`);
@@ -363,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAbortController.signal
         );
         
-        textTarget.innerText = liveOutputText;
+        if (textTarget) textTarget.innerText = liveOutputText;
 
         lastMessageContext = liveOutputText;
         outputLayerCounter++;
@@ -371,55 +392,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (checkGuestAccess()) {
             setButtonStateActive();
         }
-        chatThread.scrollTop = chatThread.scrollHeight;
+        if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
 
     // --- AUTHENTICATION INTERFACE FORM TOGGLE ---
-    authToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        isSignUpMode = !isSignUpMode;
-        if (isSignUpMode) {
-            authTitle.textContent = "Register New Matrix Profile";
-            btnSubmit.textContent = "Initialize Registration";
-            toggleMsg.textContent = "Already verified?";
-            authToggle.textContent = "Sign In";
-        } else {
-            authTitle.textContent = "Account Verification";
-            btnSubmit.textContent = "Verify Credentials";
-            toggleMsg.textContent = "New node initialization?";
-            authToggle.textContent = "Create Account";
-        }
-    });
-
-    authForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        // Setup point for direct integration with `supabase.auth` pipelines later
-        handleSessionUnlock();
-    });
-
-    btnGoogle.addEventListener('click', () => {
-        handleSessionUnlock();
-    });
-
-    btnGithub.addEventListener('click', () => {
-        handleSessionUnlock();
-    });
-
-    function handleSessionUnlock() {
-        isUserLoggedIn = true;
-        dismissAuthModal();
-        masterInput.disabled = false;
-        masterInput.placeholder = "Type instructions for the next model layer...";
-        setButtonStateActive();
-        
-        // Reflect premium authentication state across the main global profile header
-        accountStatusDot.className = "h-2 w-2 rounded-full bg-luxury-gold shadow-gold-glow animate-pulse";
-        accountStatusLabel.textContent = "Verified Profile";
-        console.log("Session verified! Unlimited network layer mapping unlocked.");
+    if (authToggle) {
+        authToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            isSignUpMode = !isSignUpMode;
+            if (isSignUpMode) {
+                if (authTitle) authTitle.textContent = "Register New Matrix Profile";
+                if (btnSubmit) btnSubmit.textContent = "Initialize Registration";
+                if (toggleMsg) toggleMsg.textContent = "Already verified?";
+                authToggle.textContent = "Sign In";
+            } else {
+                if (authTitle) authTitle.textContent = "Account Verification";
+                if (btnSubmit) btnSubmit.textContent = "Verify Credentials";
+                if (toggleMsg) toggleMsg.textContent = "New node initialization?";
+                authToggle.textContent = "Create Account";
+            }
+        });
     }
 
-    // --- GLOBAL EVENT REGISTRATION ---
-    sendBtn.addEventListener('click', handleExecute);
-    masterInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.prevent
+    if (authForm) {
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSession
