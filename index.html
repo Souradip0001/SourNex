@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOURNEX | Create And Build </title>
+    <title>SOURNEX | Luxury Multi-AI Orchestration Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -24,100 +24,120 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0a0a0a; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 99px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
 </head>
-<body class="bg-luxury-dark text-zinc-100 min-h-screen flex flex-col justify-between select-none overflow-x-hidden">
-<div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-    <div class="bg-luxury-surface border border-luxury-border p-8 rounded-2xl max-w-md w-full space-y-6 shadow-gold-glow">
-        <div class="text-center space-y-2">
-            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
-                <span class="text-luxury-gold font-bold text-lg tracking-wider">S</span>
-            </div>
-            <h2 id="auth-title" class="text-sm font-semibold tracking-[0.2em] text-white uppercase pt-2">Account Verification</h2>
-            <p class="text-[11px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
-        </div>
+<body class="bg-luxury-dark text-zinc-300 h-screen flex flex-col justify-between overflow-hidden select-none">
 
-        <form id="credentials-form" class="space-y-4">
-            <div class="space-y-1">
-                <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
-                <input type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
-            </div>
-            <div class="space-y-1">
-                <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
-                <input type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
-            </div>
-            <button id="btn-submit" type="submit" class="w-full py-3 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
-                Verify Credentials
+    <div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="relative bg-luxury-surface border border-luxury-border p-8 rounded-2xl max-w-md w-full space-y-6 shadow-gold-glow">
+            
+            <button id="auth-close-btn" class="absolute top-4 right-4 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
             </button>
-        </form>
 
-        <div class="relative flex py-2 items-center">
-            <div class="flex-grow border-t border-luxury-border/60"></div>
-            <span class="flex-shrink mx-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Federated Identity</span>
-            <div class="flex-grow border-t border-luxury-border/60"></div>
-        </div>
+            <div class="text-center space-y-2">
+                <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
+                    <span class="text-luxury-gold font-bold text-lg tracking-wider">S</span>
+                </div>
+                <h2 id="auth-title" class="text-sm font-semibold tracking-[0.2em] text-white uppercase pt-2">Account Verification</h2>
+                <p class="text-[11px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
+            </div>
 
-        <div class="grid grid-cols-2 gap-3">
-            <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
-                <span>Google</span>
-            </button>
-            <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
-                <span>GitHub</span>
-            </button>
-        </div>
+            <form id="credentials-form" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
+                    <input type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
+                    <input type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+                </div>
+                <button id="btn-submit" type="submit" class="w-full py-3 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
+                    Verify Credentials
+                </button>
+            </form>
 
-        <div class="text-center pt-2">
-            <span id="toggle-msg" class="text-xs text-zinc-500">New node initialization?</span>
-            <a href="#" id="auth-toggle" class="text-xs text-luxury-gold hover:underline ml-1">Create Account</a>
+            <div class="relative flex py-2 items-center">
+                <div class="flex-grow border-t border-luxury-border/60"></div>
+                <span class="flex-shrink mx-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Federated Identity</span>
+                <div class="flex-grow border-t border-luxury-border/60"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                    <span>Google</span>
+                </button>
+                <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                    <span>GitHub</span>
+                </button>
+            </div>
+
+            <div class="text-center pt-2 flex flex-col space-y-3">
+                <div>
+                    <span id="toggle-msg" class="text-xs text-zinc-500">New node initialization?</span>
+                    <a href="#" id="auth-toggle" class="text-xs text-luxury-gold hover:underline ml-1">Create Account</a>
+                </div>
+                <div class="border-t border-luxury-border/40 pt-2">
+                    <a href="#" id="auth-guest-bypass" class="text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Continue as Guest</a>
+                </div>
+            </div>
         </div>
     </div>
-</div>
-    
-    <header class="border-b border-luxury-border/80 bg-luxury-dark/90 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+
+    <header class="border-b border-luxury-border bg-luxury-dark/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40">
         <div class="flex items-center space-x-3">
-            <div class="h-9 w-9 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center shadow-gold-glow">
-                <span class="text-luxury-gold font-bold text-sm tracking-wider">S</span>
-            </div>
-            <div>
-                <h1 class="text-xs font-semibold tracking-[0.25em] text-white uppercase flex items-center">
-                    SOURNEX BY SOURADIP <span class="text-[9px] text-zinc-500 font-mono tracking-widest ml-3 normal-case font-normal border-l border-zinc-800 pl-3">ENGINE: DYNAMIC ARRAY</span>
-                </h1>
-            </div>
+            <span class="text-xs tracking-[0.3em] font-bold text-white uppercase bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">SourNexZ Workspace</span>
+            <span class="text-[9px] font-mono px-2 py-0.5 rounded border border-luxury-gold/20 bg-luxury-gold/5 text-luxury-gold tracking-widest uppercase">Alpha Layer</span>
         </div>
-        <div class="flex items-center space-x-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-500/80 animate-pulse" id="engine-status-glow"></span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500" id="engine-status-text">Scanning Matrix...</span>
+        
+        <div class="flex items-center space-x-4">
+            <button id="global-account-btn" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-950 text-xs text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer focus:outline-none">
+                <div class="h-2 w-2 rounded-full bg-zinc-600" id="account-status-dot"></div>
+                <span id="account-status-label" class="font-mono text-[11px]">Guest Profile</span>
+            </button>
+
+            <div class="flex items-center space-x-2 border-l border-luxury-border pl-4">
+                <div id="engine-status-glow" class="h-2 w-2 rounded-full bg-zinc-700"></div>
+                <span id="engine-status-text" class="text-[11px] font-mono tracking-wider text-zinc-500 uppercase">Indexing...</span>
+            </div>
         </div>
     </header>
 
-    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 overflow-y-auto space-y-6" id="chat-thread">
-        <div class="flex items-start space-x-4 animate-fade-in">
-            <div class="h-8 w-8 rounded border border-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] font-mono text-zinc-500 bg-zinc-950">SYS</div>
-            <div class="bg-luxury-surface border border-luxury-border/60 p-5 rounded-xl w-full">
-                <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold mb-1">Sournex Matrix Initialize</p>
-                <p class="text-sm text-zinc-400 leading-relaxed">
-                    Welcome to the Sournex Workspace. Enjoy,Create and Discover Ideas, workflows with your own way.
-                </p>
-            </div>
+    <main class="flex-1 overflow-y-auto px-6 py-8 space-y-6 max-w-4xl w-full mx-auto" id="chat-thread">
+        <div class="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-40 py-12" id="empty-state">
+            <p class="text-sm tracking-widest uppercase font-mono text-zinc-500">Workspace Stream Matrix Cleared</p>
+            <p class="text-xs text-zinc-600 max-w-xs leading-relaxed">Select an active LLM pipeline configuration dock layout at the bottom to inject code prompts securely.</p>
         </div>
     </main>
 
-    <footer class="border-t border-luxury-border bg-luxury-surface/40 backdrop-blur-xl p-4 sticky bottom-0 z-40">
-        <div class="max-w-3xl w-full mx-auto space-y-4">
+    <footer class="border-t border-luxury-border bg-luxury-surface/80 backdrop-blur-md px-6 py-4 sticky bottom-0 z-40">
+        <div class="max-w-4xl w-full mx-auto space-y-3">
             
-            <div class="space-y-2">
-                <p class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Active Allocations (Free Network):</p>
-                <div class="flex flex-wrap gap-1.5 p-1.5 bg-luxury-dark/80 border border-luxury-border rounded-xl max-h-32 overflow-y-auto" id="dynamic-model-dock">
-                    <span class="text-[11px] text-zinc-600 italic px-2 py-1">Contacting live metadata registry...</span>
+            <div class="space-y-2 w-full border border-luxury-border bg-luxury-surface/40 p-3 rounded-xl shadow-inner">
+                <div class="flex items-center justify-between cursor-pointer select-none" id="dock-expand-trigger">
+                    <p class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase flex items-center space-x-2">
+                        <span>Active Allocations (Free Network)</span>
+                        <span id="dock-counter-badge" class="px-1.5 py-0.2 bg-zinc-900 border border-zinc-800 text-zinc-400 text-[9px] rounded font-mono">0</span>
+                    </p>
+                    <button class="text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none">
+                        <svg id="dock-chevron" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="dock-collapsible-wrapper" class="transition-all duration-300 ease-in-out overflow-hidden max-h-0">
+                    <div class="flex flex-wrap gap-1.5 pt-2 max-h-40 overflow-y-auto" id="dynamic-model-dock">
+                        <span class="text-[11px] text-zinc-600 italic px-2 py-1">Contacting live metadata registry...</span>
+                    </div>
                 </div>
             </div>
 
