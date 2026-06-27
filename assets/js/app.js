@@ -316,11 +316,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (emptyState) emptyState.remove();
 
+        // FIX 1: Fixed the broken 'text' variable error. Now it maps explicitly to promptText.
         const userHtml = `
-            <div class="flex items-start space-x-4 justify-end animate-fade-in">
+            <div class="flex items-start space-x-4 justify-end animate-fade-in mb-4">
                 <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
                     <p class="text-xs text-zinc-500 tracking-wider uppercase mb-1">User Prompt</p>
-                    <p class="text-sm text-white leading-relaxed">${text}</p>
+                    <p class="text-sm text-white leading-relaxed">${promptText}</p>
                 </div>
                 <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
             </div>`;
@@ -332,10 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const conf = modelMetadataRegistry[selectedModelId] || { name: 'Unknown Target Node', short: 'AI' };
         const uniqueId = `seq-${Date.now()}`;
-        const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
-
+        
         const modelHtml = `
-            <div class="flex items-start space-x-4 animate-fade-in">
+            <div class="flex items-start space-x-4 animate-fade-in mb-4">
                 <div class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
                 <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
                     <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
@@ -396,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    
     if (authForm) {
         authForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -421,6 +422,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
+    
+    
     if (masterInput) {
         masterInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
