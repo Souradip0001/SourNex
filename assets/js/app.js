@@ -392,7 +392,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (textTarget) textTarget.innerText = liveOutputText;
 
-        lastMessageContext = liveOutputText;
+        // FIX: Context Guard Filter
+        // Only inherit context if it's a valid structural string and does not contain server/abort exceptions
+        if (
+            liveOutputText && 
+            !liveOutputText.includes("Server Error:") && 
+            !liveOutputText.includes("Gateway exception") && 
+            !liveOutputText.includes("Generation terminated by operator") && 
+            !liveOutputText.includes("Secure link failed:")
+        ) {
+            lastMessageContext = liveOutputText;
+        } else {
+            console.log("Exception stream detected. Retaining clean historical context layer.");
+        }
+
         outputLayerCounter++;
         
         if (checkGuestAccess()) {
@@ -400,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
+    
 
     // --- AUTHENTICATION INTERFACE FORM TOGGLE ---
     if (authToggle) {
