@@ -1,6 +1,6 @@
 /**
  * SOURNEX ENGINE Core Orchestration Script
- * Infrastructure: Client-Side Multi-AI Layer Mapping
+ * Infrastructure: Client-Side Multi-AI Layer Mapping (Mobile-Optimized)
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- UI CORE ELEMENTS ---
@@ -61,15 +61,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
+    // --- AUTH LAYER OVERLAYS: MOBILE FAIL-SAFE FORCED SHOW/HIDE ---
     const displayAuthModal = () => {
-        if (authOverlay) authOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        if (authOverlay) {
+            authOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            authOverlay.classList.add('flex'); // Ensure layout behaves as a proper flex container
+        }
     };
     
     const dismissAuthModal = () => {
-        if (authOverlay) authOverlay.classList.add('opacity-0', 'pointer-events-none');
+        if (authOverlay) {
+            authOverlay.classList.remove('flex');
+            authOverlay.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+        }
     };
 
+    // Support both standardized click and mobile touch setups smoothly
     if (globalAccountBtn) globalAccountBtn.addEventListener('click', displayAuthModal);
     if (authCloseBtn) authCloseBtn.addEventListener('click', dismissAuthModal);
     if (authGuestBypass) {
@@ -407,14 +414,4 @@ document.addEventListener('DOMContentLoaded', () => {
                 authToggle.textContent = "Sign In";
             } else {
                 if (authTitle) authTitle.textContent = "Account Verification";
-                if (btnSubmit) btnSubmit.textContent = "Verify Credentials";
-                if (toggleMsg) toggleMsg.textContent = "New node initialization?";
-                authToggle.textContent = "Create Account";
-            }
-        });
-    }
-
-    if (authForm) {
-        authForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleSession
+                if (btnSubmit) btnSubmit.textContent = "Ver
