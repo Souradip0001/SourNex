@@ -4,6 +4,18 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- UI CORE ELEMENTS ---
+    // Force allow user text highlighting across the thread
+const selectionStyle = document.createElement('style');
+selectionStyle.innerHTML = `
+    #chat-thread, #chat-thread * {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+    }
+`;
+document.head.appendChild(selectionStyle);
+    
     const chatThread = document.getElementById('chat-thread');
     const masterInput = document.getElementById('master-input');
     const sendBtn = document.getElementById('send-btn');
@@ -73,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (authOverlay) {
             authOverlay.classList.remove('pointer-events-auto', 'flex');
             authOverlay.classList.add('opacity-0', 'pointer-events-none', 'hidden');
+            authOverlay.style.zIndex = "50"; // Bring to front when active
         }
     };
 
