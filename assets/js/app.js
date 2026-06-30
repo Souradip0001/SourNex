@@ -98,7 +98,7 @@ document.head.appendChild(selectionStyle);
         });
     }
 
-    // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
+        // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
     function checkGuestAccess() {
         if (isUserLoggedIn) return true;
 
@@ -107,26 +107,24 @@ document.head.appendChild(selectionStyle);
         let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
 
         const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
-        if (authGuestBypass) {
-            authGuestBypass.textContent = `Continue as Guest (${allocatedPromptsRemaining} Prompts Left)`;
+        
+        // Dynamic input placeholder adjustment to show guest status
+        if (masterInput && !cooldownExpiry) {
+            masterInput.placeholder = `Guest Access Active (${allocatedPromptsRemaining} free layers remaining)...`;
         }
 
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
-            const hoursLeft = Math.floor(minutesLeftTotal / 60);
-            const minutesLeft = minutesLeftTotal % 60;
-            
-            let timeString = hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`;
             
             if (masterInput) {
                 masterInput.disabled = true;
-                masterInput.placeholder = `Guest quota exhausted. Cooling down (${timeString} remaining). Sign up to unlock.`;
+                masterInput.placeholder = `Guest quota exhausted. Sign up or wait ${minutesLeftTotal}m to unlock.`;
             }
             
             if (sendBtn) {
                 sendBtn.disabled = true;
-                sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 focus:outline-none cursor-not-allowed";
+                sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed";
                 sendBtn.innerHTML = `<span>Locked</span>`;
             }
             return false;
@@ -135,11 +133,12 @@ document.head.appendChild(selectionStyle);
         if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
-            if (authGuestBypass) authGuestBypass.textContent = "Continue as Guest (10 Prompts Left)";
         }
 
         return true;
     }
+    
+    
 
     // --- METADATA DIRECTORY ENGINE ---
     async function initializeModelMatrix() {
@@ -483,7 +482,7 @@ document.head.appendChild(selectionStyle);
     }
 
     // Initialize systems on load
-    displayAuthModal(); 
+   // displayAuthModal(); 
     checkGuestAccess();
     initializeModelMatrix();
 });
