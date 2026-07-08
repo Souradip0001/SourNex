@@ -5,6 +5,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- UI CORE ELEMENTS ---
     // Force allow user text highlighting across the thread
+    // --- DATABASE HANDSHAKE INITIALIZATION ---
+const SUPABASE_URL = "https://qyznllcvbgeygusscpjs.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_NeNNwjPtDVVjSj5GgabI2Q_7JNnUslS";            
+
+// Create the connection client globally
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
 const selectionStyle = document.createElement('style');
 selectionStyle.innerHTML = `
     #chat-thread, #chat-thread * {
