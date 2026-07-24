@@ -5,29 +5,48 @@
     <meta name="google-site-verification" content="viMPILmsC8S9bvAsud-fZF5dQgCtNGQguKhn0EeCc4U" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SourNex Engine | Multi-Layer AI Orchestration Matrix</title>
-<meta name="description" content="Chat with multiple AI models simultaneously and Route and orchestrate instructions across multiple elite AI models simultaneously. Execute parallel prompts through a single unified client-side interface layer.">
-<meta name="keywords" content="chat with many AI, AI orchestration, multi-model chat, openrouter, client-side AI, free AI layer, SourNex">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="description" content="Chat with multiple AI models simultaneously and Route and orchestrate instructions across multiple elite AI models simultaneously. Execute parallel prompts through a single unified client-side interface layer.">
+    <meta name="keywords" content="chat with many AI, AI orchestration, multi-model chat, openrouter, client-side AI, free AI layer, SourNex">
+
+    <!-- External Custom Professional Stylesheet -->
+    <link rel="stylesheet" href="assets/css/professional.css" id="custom-css" onerror="loadFallbackStyles()">
+
+    <!-- Fallback Loader Script & Hardcoded CSS -->
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'luxury-dark': '#0a0a0a',
-                        'luxury-surface': '#121212',
-                        'luxury-border': '#1f1f1f',
-                        'luxury-gold': '#d4af37',
-                    },
-                    boxShadow: {
-                        'gold-glow': '0 0 15px -3px rgba(212, 175, 55, 0.05)',
+        function loadFallbackStyles() {
+            console.warn("External CSS failed to load. Initializing hardcoded Tailwind fallback...");
+            
+            // Inject Google Fonts
+            const fontLink = document.createElement('link');
+            fontLink.rel = 'stylesheet';
+            fontLink.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap';
+            document.head.appendChild(fontLink);
+
+            // Inject Tailwind CDN
+            const tailwindScript = document.createElement('script');
+            tailwindScript.src = 'https://cdn.tailwindcss.com';
+            tailwindScript.onload = () => {
+                tailwind.config = {
+                    theme: {
+                        extend: {
+                            colors: {
+                                'luxury-dark': '#0a0a0a',
+                                'luxury-surface': '#121212',
+                                'luxury-border': '#1f1f1f',
+                                'luxury-gold': '#d4af37',
+                            },
+                            boxShadow: {
+                                'gold-glow': '0 0 15px -3px rgba(212, 175, 55, 0.05)',
+                            }
+                        }
                     }
-                }
-            }
+                };
+            };
+            document.head.appendChild(tailwindScript);
         }
     </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    <style id="hardcoded-fallback-styles">
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0a0a0a; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         ::-webkit-scrollbar { width: 5px; }
@@ -36,6 +55,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
     </style>
 </head>
+    
 <body class="bg-luxury-dark text-zinc-300 h-screen flex flex-col justify-between overflow-hidden select-none">
 
     <div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
