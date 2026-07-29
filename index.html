@@ -8,6 +8,9 @@
     <meta name="description" content="Chat with multiple AI models simultaneously and Route and orchestrate instructions across multiple elite AI models simultaneously. Execute parallel prompts through a single unified client-side interface layer.">
     <meta name="keywords" content="chat with many AI, AI orchestration, multi-model chat, openrouter, client-side AI, free AI layer, SourNex">
 
+    <!-- Cloudflare Turnstile CAPTCHA API Script -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
     <!-- External Custom Professional Stylesheet -->
     <link rel="stylesheet" href="assets/css/professional.css" id="custom-css" onerror="loadFallbackStyles()">
 
@@ -59,7 +62,7 @@
 <body class="bg-luxury-dark text-zinc-300 h-screen flex flex-col justify-between overflow-hidden select-none">
 
     <div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-        <div class="relative bg-luxury-surface border border-luxury-border p-8 rounded-2xl max-w-md w-full space-y-6 shadow-gold-glow">
+        <div class="relative bg-luxury-surface border border-luxury-border p-6 md:p-8 rounded-2xl max-w-md w-full space-y-5 shadow-gold-glow max-h-[90vh] overflow-y-auto">
             
             <button id="auth-close-btn" class="absolute top-4 right-4 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,52 +70,114 @@
                 </svg>
             </button>
 
-            <div class="text-center space-y-2">
-                <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
-                    <span class="text-luxury-gold font-bold text-lg tracking-wider">S</span>
+            <div class="text-center space-y-1.5">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
+                    <span class="text-luxury-gold font-bold text-base tracking-wider">S</span>
                 </div>
-                <h2 id="auth-title" class="text-sm font-semibold tracking-[0.2em] text-white uppercase pt-2">Account Verification</h2>
-                <p class="text-[11px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
+                <h2 id="auth-title" class="text-xs font-semibold tracking-[0.2em] text-white uppercase pt-1">Account Verification</h2>
+                <p class="text-[10px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
             </div>
 
-            <form id="credentials-form" class="space-y-4">
-                <div class="space-y-1">
-    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
-    <input id="email" type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
-</div>
+            <!-- Email Verification Notice Banner (Hidden by default) -->
+            <div id="email-verification-notice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono leading-relaxed space-y-1">
+                <div class="flex items-center space-x-2 font-bold text-amber-400 uppercase tracking-wider text-[10px]">
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Check Email Verification Inbox</span>
+                </div>
+                <p class="text-zinc-400">A security magic link has been dispatched. Please confirm your address before accessing the Alpha Layer.</p>
+            </div>
 
-<div class="space-y-1">
-    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
-    <input id="password" type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
-</div>
+            <form id="credentials-form" class="space-y-3.5">
+                <!-- Email Address -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
+                    <input id="email" type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
+                </div>
+
+                <!-- Access Cipher (Password with Eye Toggle) -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
+                    <div class="relative">
+                        <input id="password" type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl pl-4 pr-10 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+                        <button type="button" id="toggle-password-btn" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
+                            <!-- Eye Icon Off (Default) -->
+                            <svg id="eye-icon-off" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22"></path>
+                            </svg>
+                            <!-- Eye Icon On (Hidden initially) -->
+                            <svg id="eye-icon-on" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirm Access Cipher (Hidden by default, toggled via JS on sign-up) -->
+                <div id="confirm-password-container" class="space-y-1 hidden">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Confirm Access Cipher</label>
+                    <input id="confirm-password" type="password" class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+                </div>
+
+                <!-- Optional Provider API Key Input -->
+                <div id="api-key-container" class="space-y-1 hidden">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">OpenRouter / Provider Key</label>
+                        <span class="text-[9px] font-mono text-luxury-gold/70 uppercase">Optional</span>
+                    </div>
+                    <div class="relative">
+                        <input id="user-provider-key" type="password" class="w-full bg-luxury-dark border border-luxury-border rounded-xl pl-4 pr-10 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="sk-or-v1-...">
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-zinc-600 font-mono">Bypasses rate limits and unlocks custom tier models directly.</p>
+                </div>
+
+                <!-- Terms & Conditions Checkbox -->
+                <div id="terms-container" class="flex items-start space-x-2 pt-1 hidden">
+                    <input id="terms-checkbox" type="checkbox" class="mt-0.5 h-3.5 w-3.5 rounded bg-luxury-dark border-luxury-border text-luxury-gold focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                    <label for="terms-checkbox" class="text-[10px] text-zinc-500 leading-tight select-none">
+                        I agree to the <a href="#" class="text-luxury-gold hover:underline">Terms of Service</a> and <a href="#" class="text-luxury-gold hover:underline">Privacy Policy</a> (Zero prompt-retention matrix protocol).
+                    </label>
+                </div>
+
+                <!-- CAPTCHA / Bot Protection Widget Container -->
+                <div id="captcha-container" class="my-2 flex justify-center hidden">
+                    <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="dark"></div>
+                </div>
                 
-                <button id="btn-submit" type="submit" class="w-full py-3 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
+                <button id="btn-submit" type="submit" class="w-full py-2.5 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
                     Verify Credentials
                 </button>
             </form>
 
-            <div class="relative flex py-2 items-center">
+            <div class="relative flex py-1 items-center">
                 <div class="flex-grow border-t border-luxury-border/60"></div>
                 <span class="flex-shrink mx-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Federated Identity</span>
                 <div class="flex-grow border-t border-luxury-border/60"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium cursor-pointer">
                     <span>Google</span>
                 </button>
-                <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium cursor-pointer">
                     <span>GitHub</span>
                 </button>
             </div>
 
-            <div class="text-center pt-2 flex flex-col space-y-3">
+            <div class="text-center pt-1 flex flex-col space-y-2">
                 <div>
                     <span id="toggle-msg" class="text-xs text-zinc-500">New node initialization?</span>
                     <a href="#" id="auth-toggle" class="text-xs text-luxury-gold hover:underline ml-1">Create Account</a>
                 </div>
                 <div class="border-t border-luxury-border/40 pt-2">
-                    <a href="#" id="auth-guest-bypass" class="text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Continue as Guest</a>
+                    <a href="#" id="auth-guest-bypass" class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Continue as Guest</a>
                 </div>
             </div>
         </div>
@@ -188,11 +253,8 @@
         </div>
     </footer>
 
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/auth.js"></script>
     <script src="assets/js/app.js"></script>
-</body>
-</html>
-
 </body>
 </html>
