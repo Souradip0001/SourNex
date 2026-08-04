@@ -8,87 +8,151 @@
     <meta name="description" content="Chat with multiple AI models simultaneously and Route and orchestrate instructions across multiple elite AI models simultaneously. Execute parallel prompts through a single unified client-side interface layer.">
     <meta name="keywords" content="chat with many AI, AI orchestration, multi-model chat, openrouter, client-side AI, free AI layer, SourNex">
 
+    <!-- External Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Cloudflare Turnstile CAPTCHA API Script -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
-    <!-- External Custom Professional Stylesheet -->
-    <link rel="stylesheet" href="assets/css/professional.css" id="custom-css" onerror="loadFallbackStyles()">
-
-    <!-- Fallback Loader Script & Hardcoded CSS -->
+    <!-- Tailwind CDN with Embedded Config Safety -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        function loadFallbackStyles() {
-            console.warn("External CSS failed to load. Initializing hardcoded Tailwind fallback...");
-            
-            // Inject Google Fonts
-            const fontLink = document.createElement('link');
-            fontLink.rel = 'stylesheet';
-            fontLink.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap';
-            document.head.appendChild(fontLink);
-
-            // Inject Tailwind CDN
-            const tailwindScript = document.createElement('script');
-            tailwindScript.src = 'https://cdn.tailwindcss.com';
-            tailwindScript.onload = () => {
-                tailwind.config = {
-                    theme: {
-                        extend: {
-                            colors: {
-                                'luxury-dark': '#0a0a0a',
-                                'luxury-surface': '#121212',
-                                'luxury-border': '#1f1f1f',
-                                'luxury-gold': '#d4af37',
-                            },
-                            boxShadow: {
-                                'gold-glow': '0 0 15px -3px rgba(212, 175, 55, 0.05)',
-                            }
-                        }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'luxury-dark': '#0a0a0a',
+                        'luxury-surface': '#121212',
+                        'luxury-border': '#1f1f1f',
+                        'luxury-gold': '#d4af37',
+                    },
+                    boxShadow: {
+                        'gold-glow': '0 0 15px -3px rgba(212, 175, 55, 0.15)',
                     }
-                };
-            };
-            document.head.appendChild(tailwindScript);
-        }
+                }
+            }
+        };
     </script>
-    
-    <!-- HARDCODED CRITICAL FALLBACK STYLES (Prevents Security Leaks & Giant SVGs when CSS fails) -->
-    <style id="hardcoded-fallback-styles">
-        body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background-color: #0a0a0a; color: #d4d4d8; margin: 0; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .hidden { display: none !important; }
-        
-        /* Modal Overlay Security Fallback */
+
+    <!-- HARDCODED CRITICAL STYLES -->
+    <style id="embedded-core-styles">
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-surface: #121212;
+            --border-color: #1f1f1f;
+            --accent-gold: #d4af37;
+            --text-main: #d4d4d8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        svg {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
         #auth-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(10, 10, 10, 0.96);
-            z-index: 9999;
+            inset: 0;
+            background-color: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(12px);
+            z-index: 50;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
         }
 
-        /* SVG Sizing Safety Net */
-        svg {
-            max-width: 100%;
-            height: auto;
-        }
-        
-        input, button, textarea {
-            box-sizing: border-box;
+        .auth-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            max-width: 28rem;
+            width: 100%;
+            box-shadow: 0 0 20px -5px rgba(212, 175, 55, 0.1);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="date"],
+        textarea {
+            width: 100%;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            color: #e4e4e7;
+            font-size: 0.75rem;
+            padding: 0.625rem 1rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        /* Styling native browser datepicker icon for dark mode */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="date"]:focus,
+        textarea:focus {
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a2a2a;
+        }
     </style>
 </head>
     
 <body class="bg-luxury-dark text-zinc-300 h-screen flex flex-col justify-between overflow-hidden select-none">
 
     <!-- AUTHENTICATION OVERLAY MODAL -->
-    <div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-        <div class="relative bg-luxury-surface border border-luxury-border p-6 md:p-8 rounded-2xl max-w-md w-full space-y-5 shadow-gold-glow max-h-[90vh] overflow-y-auto">
+    <div id="auth-overlay">
+        <div class="auth-card relative space-y-5">
             
             <button id="auth-close-btn" class="absolute top-4 right-4 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
                 <svg class="w-5 h-5" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,17 +180,33 @@
             </div>
 
             <form id="credentials-form" class="space-y-3.5">
+                
+                <!-- Custom Username Input Container (Visible on Sign Up) -->
+                <div id="username-container" class="space-y-1 hidden">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Operator Alias / Username</label>
+                        <span class="text-[9px] font-mono text-zinc-600 uppercase">Editable Later</span>
+                    </div>
+                    <input id="username" type="text" placeholder="e.g. CyberOperator99">
+                </div>
+
+                <!-- Date of Birth Input Container (Visible on Sign Up) -->
+                <div id="dob-container" class="space-y-1 hidden">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Date of Birth</label>
+                    <input id="dob" type="date">
+                </div>
+
                 <!-- Email Address -->
                 <div class="space-y-1">
                     <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
-                    <input id="email" type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
+                    <input id="email" type="email" required placeholder="operator@sournex.io">
                 </div>
 
                 <!-- Access Cipher -->
                 <div class="space-y-1">
                     <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
                     <div class="relative">
-                        <input id="password" type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl pl-4 pr-10 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+                        <input id="password" type="password" required class="pr-10" placeholder="••••••••">
                         <button type="button" id="toggle-password-btn" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
                             <svg id="eye-icon-off" class="w-4 h-4" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22"></path>
@@ -142,7 +222,7 @@
                 <!-- Confirm Access Cipher -->
                 <div id="confirm-password-container" class="space-y-1 hidden">
                     <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Confirm Access Cipher</label>
-                    <input id="confirm-password" type="password" class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+                    <input id="confirm-password" type="password" placeholder="••••••••">
                 </div>
 
                 <!-- Optional Provider API Key -->
@@ -152,9 +232,8 @@
                         <span class="text-[9px] font-mono text-luxury-gold/70 uppercase">Optional</span>
                     </div>
                     <div class="relative">
-                        <input id="user-provider-key" type="password" class="w-full bg-luxury-dark border border-luxury-border rounded-xl pl-4 pr-10 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="sk-or-v1-...">
+                        <input id="user-provider-key" type="password" class="pr-10" placeholder="sk-or-v1-...">
                         <div class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600">
-                            <!-- HARDCODED SVG WIDTH AND HEIGHT ATTRIBUTES TO PREVENT EXPLOSIVE SIZING -->
                             <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
                             </svg>
@@ -171,10 +250,27 @@
                     </label>
                 </div>
 
-                <!-- CAPTCHA / Bot Protection Container -->
+                <!-- CAPTCHA Container -->
                 <div id="captcha-container" class="my-2 flex justify-center hidden">
                     <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="dark"></div>
                 </div>
+                <!-- OTP INPUT STEP -->
+<div id="otp-step-container" class="space-y-3 hidden">
+    <div class="p-3 rounded-xl bg-luxury-gold/10 border border-luxury-gold/30 text-luxury-gold text-[11px] font-mono leading-relaxed space-y-1">
+        <div class="flex items-center space-x-2 font-bold uppercase tracking-wider text-[10px]">
+            <svg class="w-4 h-4 text-luxury-gold" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            <span>Enter 6-Digit Security Code</span>
+        </div>
+        <p class="text-zinc-400">We sent a verification code to your email address.</p>
+    </div>
+
+    <div class="space-y-1">
+        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Verification OTP</label>
+        <input id="otp-code" type="text" maxlength="6" placeholder="123456" class="text-center tracking-[0.5em] font-mono text-base font-bold">
+    </div>
+</div>
                 
                 <button id="btn-submit" type="submit" class="w-full py-2.5 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
                     Verify Credentials
@@ -216,9 +312,11 @@
         </div>
         
         <div class="flex items-center space-x-4">
+            <!-- Display User Name beside Status Dot/Label -->
             <button id="global-account-btn" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-950 text-xs text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer focus:outline-none">
                 <div class="h-2 w-2 rounded-full bg-zinc-600" id="account-status-dot"></div>
                 <span id="account-status-label" class="font-mono text-[11px]">Guest Profile</span>
+                <span id="header-username" class="hidden font-mono text-[10px] text-luxury-gold pl-1 border-l border-zinc-800"></span>
             </button>
 
             <div class="flex items-center space-x-2 border-l border-luxury-border pl-4">
@@ -260,7 +358,7 @@
                 </div>
             </div>
 
-            <!-- HARDENED INPUT FIELD (Starts strictly disabled) -->
+            <!-- HARDENED INPUT FIELD -->
             <div class="relative bg-luxury-dark/90 border border-luxury-border rounded-xl focus-within:border-luxury-gold/40 transition-all duration-200 shadow-inner flex items-center p-2 pl-4">
                 <textarea 
                     id="master-input"
@@ -290,4 +388,3 @@
     <script src="assets/js/app.js"></script>
 </body>
 </html>
-
