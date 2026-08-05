@@ -211,21 +211,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SESSION HANDLERS
     function handleSessionUpdate(session) {
-        if (session && session.user) {
-            window.currentUser = session.user;
-            window.isUserLoggedIn = true;
+    if (session && session.user) {
+        // CHECK IF EMAIL IS ACTUALLY CONFIRMED
+        const isEmailVerified = session.user.email_confirmed_at !== null;
 
-            const metadata = session.user.user_metadata || {};
-            const username = metadata.username || session.user.email.split('@')[0];
-
-            authOverlay?.classList.add('hidden');
-            enableChatInterface("Authenticated", username);
-        } else {
+        if (!isEmailVerified && !awaitingOtp) {
             window.currentUser = null;
             window.isUserLoggedIn = false;
+            
+            // Display unverified status
+            if (accountStatusLabel) accountStatusLabel.textContent = "Unverified Profile";
+            if (accountStatusDot) accountStatusDot.className = "h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]";
+            
+            // Keep chat interface disabled until OTP/Email verification is complete
             disableChatInterface();
+            return;
         }
+
+        // Email IS verified
+        window.currentUser = session.user;
+        window.isUserLoggedIn = true;
+
+        const metadata = session.user.user_metadata || {};
+        const username = metadata.username || session.user.email.split('@')[0];
+
+        authOverlay?.classList.add('hidden');
+        enableChatInterface("Authenticated", username);
+    } else {
+        window.currentUser = null;
+        window.isUserLoggedIn = false;
+        disableChatInterface();
     }
+    }
+    
 
     function enableChatInterface(statusLabel, username) {
         if (accountStatusLabel) accountStatusLabel.textContent = statusLabel;
