@@ -8,6 +8,7 @@ window.currentUser = null;
 window.isUserLoggedIn = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+    
     const authOverlay = document.getElementById('auth-overlay');
     const authCloseBtn = document.getElementById('auth-close-btn');
     const authForm = document.getElementById('credentials-form');
@@ -16,6 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleMsg = document.getElementById('toggle-msg');
     const submitBtn = document.getElementById('btn-submit');
     const guestBypassBtn = document.getElementById('auth-guest-bypass');
+    // PASSWORD VISIBILITY TOGGLE LOGIC
+document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', () => {
+        const input = button.parentElement.querySelector('input');
+        if (input) {
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            button.classList.toggle('text-luxury-gold', isPassword);
+            button.classList.toggle('text-zinc-500', !isPassword);
+        }
+    });
+});
+    
 
     // Input containers
     const usernameContainer = document.getElementById('username-container');
