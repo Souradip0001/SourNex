@@ -225,24 +225,26 @@ document.querySelectorAll('.toggle-password').forEach(button => {
 
     // SESSION HANDLERS
     function handleSessionUpdate(session) {
+    // 1. DO NOT auto-login while waiting for the user to type the OTP code
+    if (awaitingOtp) {
+        disableChatInterface();
+        return;
+    }
+
     if (session && session.user) {
-        // CHECK IF EMAIL IS ACTUALLY CONFIRMED
+        // 2. CHECK IF EMAIL IS CONFIRMED
         const isEmailVerified = session.user.email_confirmed_at !== null;
 
-        if (!isEmailVerified && !awaitingOtp) {
+        if (!isEmailVerified) {
+            // Force sign out background session if unverified
+            supabaseClient.auth.signOut();
             window.currentUser = null;
             window.isUserLoggedIn = false;
-            
-            // Display unverified status
-            if (accountStatusLabel) accountStatusLabel.textContent = "Unverified Profile";
-            if (accountStatusDot) accountStatusDot.className = "h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]";
-            
-            // Keep chat interface disabled until OTP/Email verification is complete
             disableChatInterface();
             return;
         }
 
-        // Email IS verified
+        // 3. FULLY VERIFIED USER LOGGED IN
         window.currentUser = session.user;
         window.isUserLoggedIn = true;
 
@@ -257,6 +259,7 @@ document.querySelectorAll('.toggle-password').forEach(button => {
         disableChatInterface();
     }
     }
+    
     
 
     function enableChatInterface(statusLabel, username) {
