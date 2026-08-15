@@ -3,26 +3,18 @@
  * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // --- UI CORE ELEMENTS ---
     // Force allow user text highlighting across the thread
-    // --- DATABASE HANDSHAKE INITIALIZATION ---
-const SUPABASE_URL = "https://qyznllcvbgeygusscpjs.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_NeNNwjPtDVVjSj5GgabI2Q_7JNnUslS";            
-
-// Create the connection client globally
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-const selectionStyle = document.createElement('style');
-selectionStyle.innerHTML = `
-    #chat-thread, #chat-thread * {
-        user-select: text !important;
-        -webkit-user-select: text !important;
-        -moz-user-select: text !important;
-        -ms-user-select: text !important;
-    }
-`;
-document.head.appendChild(selectionStyle);
-    
+    const selectionStyle = document.createElement('style');
+    selectionStyle.innerHTML = `
+        #chat-thread, #chat-thread * {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+        }
+    `;
+    document.head.appendChild(selectionStyle);
+        
     const chatThread = document.getElementById('chat-thread');
     const masterInput = document.getElementById('master-input');
     const sendBtn = document.getElementById('send-btn');
@@ -31,15 +23,8 @@ document.head.appendChild(selectionStyle);
     const statusText = document.getElementById('engine-status-text');
     const emptyState = document.getElementById('empty-state');
 
-    // --- SOURNEX AUTHENTICATION UI ELEMENTS ---
+    // --- SOURNEX AUTHENTICATION UI OVERLAY ELEMENTS ---
     const authOverlay = document.getElementById('auth-overlay');
-    const authTitle = document.getElementById('auth-title');
-    const authForm = document.getElementById('credentials-form');
-    const authToggle = document.getElementById('auth-toggle');
-    const toggleMsg = document.getElementById('toggle-msg');
-    const btnSubmit = document.getElementById('btn-submit');
-    const btnGoogle = document.getElementById('btn-google');
-    const btnGithub = document.getElementById('btn-github');
     const authCloseBtn = document.getElementById('auth-close-btn');
     const authGuestBypass = document.getElementById('auth-guest-bypass');
 
@@ -51,8 +36,6 @@ document.head.appendChild(selectionStyle);
 
     // --- GLOBAL TOPBAR ACCOUNT ACTIONS ---
     const globalAccountBtn = document.getElementById('global-account-btn');
-    const accountStatusDot = document.getElementById('account-status-dot');
-    const accountStatusLabel = document.getElementById('account-status-label');
 
     // --- STATE ENGINE PARAMETERS ---
     let selectedModelId = ''; 
@@ -62,8 +45,6 @@ document.head.appendChild(selectionStyle);
     
     let currentAbortController = null; 
     let isGenerating = false;
-    let isSignUpMode = false;
-    let isUserLoggedIn = false; 
     let isDockExpanded = false;
 
     // --- SOURNEX ACCORDION CONTROL SLIDER ---
@@ -80,7 +61,7 @@ document.head.appendChild(selectionStyle);
         });
     }
 
-    // --- AUTH LAYER OVERLAYS: SHOW & HIDE CLICKS ---
+    // --- AUTH LAYER OVERLAYS: DISPLAY CONTROLS ---
     const displayAuthModal = () => {
         if (authOverlay) {
             authOverlay.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
@@ -92,7 +73,7 @@ document.head.appendChild(selectionStyle);
         if (authOverlay) {
             authOverlay.classList.remove('pointer-events-auto', 'flex');
             authOverlay.classList.add('opacity-0', 'pointer-events-none', 'hidden');
-            authOverlay.style.zIndex = "50"; // Bring to front when active
+            authOverlay.style.zIndex = "50";
         }
     };
 
@@ -105,9 +86,9 @@ document.head.appendChild(selectionStyle);
         });
     }
 
-        // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
+    // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
     function checkGuestAccess() {
-        if (isUserLoggedIn) return true;
+        if (window.isUserLoggedIn) return true;
 
         const currentTimestamp = Date.now();
         const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
@@ -115,7 +96,6 @@ document.head.appendChild(selectionStyle);
 
         const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
         
-        // Dynamic input placeholder adjustment to show guest status
         if (masterInput && !cooldownExpiry) {
             masterInput.placeholder = `Guest Access Active (${allocatedPromptsRemaining} free layers remaining)...`;
         }
@@ -144,8 +124,6 @@ document.head.appendChild(selectionStyle);
 
         return true;
     }
-    
-    
 
     // --- METADATA DIRECTORY ENGINE ---
     async function initializeModelMatrix() {
@@ -381,7 +359,7 @@ document.head.appendChild(selectionStyle);
         const promptText = masterInput ? masterInput.value.trim() : '';
         if (!promptText || !selectedModelId) return;
 
-        if (!isUserLoggedIn) {
+        if (!window.isUserLoggedIn) {
             let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
             currentCount++;
             localStorage.setItem('snx_guest_chat_count', currentCount.toString());
@@ -411,8 +389,6 @@ document.head.appendChild(selectionStyle);
         
         if (textTarget) textTarget.innerText = liveOutputText;
 
-        // FIX: Context Guard Filter
-        // Only inherit context if it's a valid structural string and does not contain server/abort exceptions
         if (
             liveOutputText && 
             !liveOutputText.includes("Server Error:") && 
@@ -432,49 +408,6 @@ document.head.appendChild(selectionStyle);
         }
         if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
-    
-
-    // --- AUTHENTICATION INTERFACE FORM TOGGLE ---
-    if (authToggle) {
-        authToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            isSignUpMode = !isSignUpMode;
-            if (isSignUpMode) {
-                if (authTitle) authTitle.textContent = "Register New Matrix Profile";
-                if (btnSubmit) btnSubmit.textContent = "Initialize Registration";
-                if (toggleMsg) toggleMsg.textContent = "Already verified?";
-                authToggle.textContent = "Sign In";
-            } else {
-                if (authTitle) authTitle.textContent = "Account Verification";
-                if (btnSubmit) btnSubmit.textContent = "Verify Credentials";
-                if (toggleMsg) toggleMsg.textContent = "New node initialization?";
-                authToggle.textContent = "Create Account";
-            }
-        });
-    }
-
-    if (authForm) {
-        authForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleSessionUnlock();
-        });
-    }
-
-    if (btnGoogle) btnGoogle.addEventListener('click', handleSessionUnlock);
-    if (btnGithub) btnGithub.addEventListener('click', handleSessionUnlock);
-
-    function handleSessionUnlock() {
-        isUserLoggedIn = true;
-        dismissAuthModal();
-        if (masterInput) {
-            masterInput.disabled = false;
-            masterInput.placeholder = "Type instructions for the next model layer...";
-        }
-        setButtonStateActive();
-        
-        if (accountStatusDot) accountStatusDot.className = "h-2 w-2 rounded-full bg-luxury-gold shadow-gold-glow animate-pulse";
-        if (accountStatusLabel) accountStatusLabel.textContent = "Verified Profile";
-    }
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
@@ -488,13 +421,12 @@ document.head.appendChild(selectionStyle);
         });
     }
 
-    // Initialize systems on load
-   // displayAuthModal(); 
+    // Initialize core matrix engine on load
     checkGuestAccess();
     initializeModelMatrix();
 });
 
-// Global Function Injection for the metadata inspection feature
+// Global metadata inspection utility
 window.toggleMetadata = function(id) {
     const metaCard = document.getElementById(`meta-${id}`);
     const chevron = document.getElementById(`chev-${id}`);

@@ -1,0 +1,136 @@
+/* ==========================================================================
+   SourNex Engine - Professional Custom Stylesheet
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* --- Root & Variable Configurations --- */
+:root {
+    --bg-dark: #070709;
+    --bg-surface: #0f0f12;
+    --bg-surface-elevated: #16161a;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(212, 175, 55, 0.3);
+    --accent-gold: #d4af37;
+    --accent-gold-hover: #f1c40f;
+    --text-primary: #f4f4f6;
+    --text-secondary: #8e8e93;
+    --text-muted: #545458;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --glass-bg: rgba(15, 15, 18, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --shadow-gold: 0 0 25px -5px rgba(212, 175, 55, 0.15);
+}
+
+/* --- Base Setup --- */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.03) 0%, transparent 70%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.01) 0%, transparent 50%);
+    background-attachment: fixed;
+    margin: 0;
+}
+
+.font-mono {
+    font-family: var(--font-mono);
+}
+
+/* --- Professional Glassmorphism & UI Containers --- */
+header, footer {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-color: var(--border-color) !important;
+}
+
+#auth-overlay > div {
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), var(--shadow-gold) !important;
+    backdrop-filter: blur(20px);
+}
+
+/* --- High-End Form Inputs --- */
+input[type="email"],
+input[type="password"],
+textarea {
+    background-color: rgba(7, 7, 9, 0.6) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+    outline: none !important;
+}
+
+/* --- Accent Buttons --- */
+#btn-submit {
+    background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%) !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.1em !important;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+    transition: all 0.2s ease !important;
+}
+
+#btn-submit:hover {
+    background: linear-gradient(135deg, #f1c40f 0%, #d4af37 100%) !important;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+    transform: translateY(-1px);
+}
+
+#btn-google, #btn-github {
+    background: var(--bg-surface-elevated) !important;
+    border: 1px solid var(--border-color) !important;
+    transition: all 0.2s ease !important;
+}
+
+#btn-google:hover, #btn-github:hover {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #ffffff !important;
+}
+
+/* --- Modern Custom Scrollbar --- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 99px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-gold);
+}
+
+/* --- Interactive Status Animations --- */
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+#engine-status-glow {
+    animation: pulse-glow 2s infinite ease-in-out;
+}
+

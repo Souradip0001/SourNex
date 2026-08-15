@@ -5,9 +5,18 @@
     <meta name="google-site-verification" content="viMPILmsC8S9bvAsud-fZF5dQgCtNGQguKhn0EeCc4U" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SourNex Engine | Multi-Layer AI Orchestration Matrix</title>
-<meta name="description" content="Chat with multiple AI models simultaneously and Route and orchestrate instructions across multiple elite AI models simultaneously. Execute parallel prompts through a single unified client-side interface layer.">
-<meta name="keywords" content="chat with many AI, AI orchestration, multi-model chat, openrouter, client-side AI, free AI layer, SourNex">
-    
+    <meta name="description" content="Chat with multiple AI models simultaneously and Route and orchestrate instructions across multiple elite AI models simultaneously. Execute parallel prompts through a single unified client-side interface layer.">
+    <meta name="keywords" content="chat with many AI, AI orchestration, multi-model chat, openrouter, client-side AI, free AI layer, SourNex">
+
+    <!-- External Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Cloudflare Turnstile CAPTCHA API Script -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    <!-- Tailwind CDN with Embedded Config Safety -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -20,84 +29,287 @@
                         'luxury-gold': '#d4af37',
                     },
                     boxShadow: {
-                        'gold-glow': '0 0 15px -3px rgba(212, 175, 55, 0.05)',
+                        'gold-glow': '0 0 15px -3px rgba(212, 175, 55, 0.15)',
                     }
                 }
             }
-        }
+        };
     </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0a0a0a; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
+
+    <!-- HARDCODED CRITICAL STYLES -->
+    <style id="embedded-core-styles">
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-surface: #121212;
+            --border-color: #1f1f1f;
+            --accent-gold: #d4af37;
+            --text-main: #d4d4d8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        svg {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        #auth-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(12px);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .auth-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            max-width: 28rem;
+            width: 100%;
+            box-shadow: 0 0 20px -5px rgba(212, 175, 55, 0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="date"],
+        textarea {
+            width: 100%;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            color: #e4e4e7;
+            font-size: 0.75rem;
+            padding: 0.625rem 1rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        /* Styling native browser datepicker icon for dark mode */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="date"]:focus,
+        textarea:focus {
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a2a2a;
+        }
     </style>
 </head>
+    
 <body class="bg-luxury-dark text-zinc-300 h-screen flex flex-col justify-between overflow-hidden select-none">
 
-    <div id="auth-overlay" class="fixed inset-0 bg-luxury-dark/95 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-        <div class="relative bg-luxury-surface border border-luxury-border p-8 rounded-2xl max-w-md w-full space-y-6 shadow-gold-glow">
+    <!-- AUTHENTICATION OVERLAY MODAL -->
+    <div id="auth-overlay">
+        <div class="auth-card relative space-y-5">
             
             <button id="auth-close-btn" class="absolute top-4 right-4 text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none cursor-pointer">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
 
-            <div class="text-center space-y-2">
-                <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
-                    <span class="text-luxury-gold font-bold text-lg tracking-wider">S</span>
+            <div class="text-center space-y-1.5">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
+                    <span class="text-luxury-gold font-bold text-base tracking-wider">S</span>
                 </div>
-                <h2 id="auth-title" class="text-sm font-semibold tracking-[0.2em] text-white uppercase pt-2">Account Verification</h2>
-                <p class="text-[11px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
+                <h2 id="auth-title" class="text-xs font-semibold tracking-[0.2em] text-white uppercase pt-1">Account Verification</h2>
+                <p class="text-[10px] text-zinc-500 font-mono tracking-wide">ACCESS CODE MATRIX REGISTRY</p>
             </div>
 
-            <form id="credentials-form" class="space-y-4">
-                <div class="space-y-1">
-    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
-    <input id="email" type="email" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="operator@sournex.io">
-</div>
+            <!-- Email Verification Notice Banner -->
+            <div id="email-verification-notice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono leading-relaxed space-y-1">
+                <div class="flex items-center space-x-2 font-bold text-amber-400 uppercase tracking-wider text-[10px]">
+                    <svg class="w-4 h-4 text-amber-400" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Check Email Verification Inbox</span>
+                </div>
+                <p class="text-zinc-400">A security magic link has been dispatched. Please confirm your address before accessing the Alpha Layer.</p>
+            </div>
 
+            <form id="credentials-form" class="space-y-3.5">
+                
+                <!-- Custom Username Input Container (Visible on Sign Up) -->
+                <div id="username-container" class="space-y-1 hidden">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Operator Alias / Username</label>
+                        <span class="text-[9px] font-mono text-zinc-600 uppercase">Editable Later</span>
+                    </div>
+                    <input id="username" type="text" placeholder="e.g. CyberOperator99">
+                </div>
+
+                <!-- Date of Birth Input Container (Visible on Sign Up) -->
+                <div id="dob-container" class="space-y-1 hidden">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Date of Birth</label>
+                    <input id="dob" type="date">
+                </div>
+
+                <!-- Email Address -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
+                    <input id="email" type="email" required placeholder="operator@sournex.io">
+                </div>
+<!-- Access Cipher -->
 <div class="space-y-1">
     <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
-    <input id="password" type="password" required class="w-full bg-luxury-dark border border-luxury-border rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-luxury-gold/40 transition-colors" placeholder="••••••••">
+    <div class="relative">
+        <input id="password" type="password" placeholder="••••••••" class="w-full pr-10">
+        <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- Confirm Access Cipher -->
+<div id="confirm-password-container" class="space-y-1 hidden">
+    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Confirm Access Cipher</label>
+    <div class="relative">
+        <input id="confirm-password" type="password" placeholder="••••••••" class="w-full pr-10">
+        <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </button>
+    </div>
 </div>
                 
-                <button id="btn-submit" type="submit" class="w-full py-3 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
+
+                <!-- Confirm Access Cipher -->
+                <div id="confirm-password-container" class="space-y-1 hidden">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Confirm Access Cipher</label>
+                    <input id="confirm-password" type="password" placeholder="••••••••">
+                </div>
+
+                <!-- Optional Provider API Key -->
+                <div id="api-key-container" class="space-y-1 hidden">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">OpenRouter / Provider Key</label>
+                        <span class="text-[9px] font-mono text-luxury-gold/70 uppercase">Optional</span>
+                    </div>
+                    <div class="relative">
+                        <input id="user-provider-key" type="password" class="pr-10" placeholder="sk-or-v1-...">
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600">
+                            <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-zinc-600 font-mono">Bypasses rate limits and unlocks custom tier models directly.</p>
+                </div>
+
+                <!-- Terms & Conditions Checkbox -->
+                <div id="terms-container" class="flex items-start space-x-2 pt-1 hidden">
+                    <input id="terms-checkbox" type="checkbox" class="mt-0.5 h-3.5 w-3.5 rounded bg-luxury-dark border-luxury-border text-luxury-gold focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                    <label for="terms-checkbox" class="text-[10px] text-zinc-500 leading-tight select-none">
+                        I agree to the <a href="#" class="text-luxury-gold hover:underline">Terms of Service</a> and <a href="#" class="text-luxury-gold hover:underline">Privacy Policy</a> (Zero prompt-retention matrix protocol).
+                    </label>
+                </div>
+
+                <!-- CAPTCHA Container -->
+                <div id="captcha-container" class="my-2 flex justify-center hidden">
+                    <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="dark"></div>
+                </div>
+                <!-- OTP INPUT STEP -->
+<div id="otp-step-container" class="space-y-3 hidden">
+    <div class="p-3 rounded-xl bg-luxury-gold/10 border border-luxury-gold/30 text-luxury-gold text-[11px] font-mono leading-relaxed space-y-1">
+        <div class="flex items-center space-x-2 font-bold uppercase tracking-wider text-[10px]">
+            <svg class="w-4 h-4 text-luxury-gold" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            <span>Enter 6-Digit Security Code</span>
+        </div>
+        <p class="text-zinc-400">We sent a verification code to your email address.</p>
+    </div>
+
+    <div class="space-y-1">
+        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Verification OTP</label>
+        <input id="otp-code" type="text" maxlength="6" placeholder="123456" class="text-center tracking-[0.5em] font-mono text-base font-bold">
+    </div>
+</div>
+                
+                <button id="btn-submit" type="submit" class="w-full py-2.5 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
                     Verify Credentials
                 </button>
             </form>
 
-            <div class="relative flex py-2 items-center">
+            <div class="relative flex py-1 items-center">
                 <div class="flex-grow border-t border-luxury-border/60"></div>
                 <span class="flex-shrink mx-4 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Federated Identity</span>
                 <div class="flex-grow border-t border-luxury-border/60"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                <button id="btn-google" type="button" class="flex items-center justify-center space-x-2 py-2 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium cursor-pointer">
                     <span>Google</span>
                 </button>
-                <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2.5 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium">
+                <button id="btn-github" type="button" class="flex items-center justify-center space-x-2 py-2 border border-luxury-border bg-luxury-dark/40 rounded-xl hover:bg-zinc-900 transition-colors text-xs text-zinc-300 font-medium cursor-pointer">
                     <span>GitHub</span>
                 </button>
             </div>
 
-            <div class="text-center pt-2 flex flex-col space-y-3">
+            <div class="text-center pt-1 flex flex-col space-y-2">
                 <div>
                     <span id="toggle-msg" class="text-xs text-zinc-500">New node initialization?</span>
                     <a href="#" id="auth-toggle" class="text-xs text-luxury-gold hover:underline ml-1">Create Account</a>
                 </div>
                 <div class="border-t border-luxury-border/40 pt-2">
-                    <a href="#" id="auth-guest-bypass" class="text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Continue as Guest</a>
+                    <a href="#" id="auth-guest-bypass" class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Continue as Guest</a>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- MAIN HEADER -->
     <header class="border-b border-luxury-border bg-luxury-dark/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40">
         <div class="flex items-center space-x-3">
             <span class="text-xs tracking-[0.3em] font-bold text-white uppercase bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">SourNexZ Workspace</span>
@@ -105,9 +317,11 @@
         </div>
         
         <div class="flex items-center space-x-4">
+            <!-- Display User Name beside Status Dot/Label -->
             <button id="global-account-btn" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-950 text-xs text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer focus:outline-none">
                 <div class="h-2 w-2 rounded-full bg-zinc-600" id="account-status-dot"></div>
                 <span id="account-status-label" class="font-mono text-[11px]">Guest Profile</span>
+                <span id="header-username" class="hidden font-mono text-[10px] text-luxury-gold pl-1 border-l border-zinc-800"></span>
             </button>
 
             <div class="flex items-center space-x-2 border-l border-luxury-border pl-4">
@@ -117,6 +331,7 @@
         </div>
     </header>
 
+    <!-- THREAD MATRIX CONTAINER -->
     <main class="flex-1 overflow-y-auto px-6 pt-8 pb-36 space-y-6 max-w-4xl w-full mx-auto" id="chat-thread">
         <div class="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-40 py-12" id="empty-state">
             <p class="text-sm tracking-widest uppercase font-mono text-zinc-500">Workspace Stream Matrix Cleared</p>
@@ -124,6 +339,7 @@
         </div>
     </main>
 
+    <!-- FOOTER CONTROLS & DOCK -->
     <footer class="border-t border-luxury-border bg-luxury-surface/80 backdrop-blur-md px-6 py-4 sticky bottom-0 z-40">
         <div class="max-w-4xl w-full mx-auto space-y-3">
             
@@ -134,7 +350,7 @@
                         <span id="dock-counter-badge" class="px-1.5 py-0.2 bg-zinc-900 border border-zinc-800 text-zinc-400 text-[9px] rounded font-mono">0</span>
                     </p>
                     <button class="text-zinc-500 hover:text-luxury-gold transition-colors focus:outline-none">
-                        <svg id="dock-chevron" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg id="dock-chevron" class="w-4 h-4" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
@@ -147,11 +363,12 @@
                 </div>
             </div>
 
+            <!-- HARDENED INPUT FIELD -->
             <div class="relative bg-luxury-dark/90 border border-luxury-border rounded-xl focus-within:border-luxury-gold/40 transition-all duration-200 shadow-inner flex items-center p-2 pl-4">
                 <textarea 
                     id="master-input"
                     rows="1" 
-                    placeholder="Awaiting target configuration allocation..." 
+                    placeholder="Authentication required to unlock pipeline..." 
                     disabled
                     class="w-full bg-transparent text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none resize-none pr-14 py-1.5 leading-relaxed font-normal disabled:opacity-40"
                 ></textarea>
@@ -168,11 +385,11 @@
         </div>
     </footer>
 
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- EXTERNAL DEPENDENCIES -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <!-- APPLICATION LOGIC SCRIPTS -->
+    <script src="assets/js/auth.js"></script>
     <script src="assets/js/app.js"></script>
-</body>
-</html>
-
 </body>
 </html>
