@@ -176,7 +176,7 @@
                     </svg>
                     <span>Check Email Verification Inbox</span>
                 </div>
-                <p class="text-zinc-400">A security magic link has been dispatched. Please confirm your address before accessing the Alpha Layer.</p>
+                <p class="text-zinc-400">A security otp has been dispatched. Please confirm your address before accessing the Workspace.</p>
             </div>
 
             <form id="credentials-form" class="space-y-3.5">
@@ -201,6 +201,28 @@
                     <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
                     <input id="email" type="email" required placeholder="operator@sournex.io">
                 </div>
+                                <!-- Email Address -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Secure Email Address</label>
+                    <input id="email" type="email" required placeholder="operator@sournex.io">
+                </div>
+
+                <!-- Access Cipher (UPDATED WITH FORGOT PASSWORD BUTTON) -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
+                        <button type="button" id="forgot-password-link" class="text-[10px] font-mono text-luxury-gold hover:underline focus:outline-none cursor-pointer">
+                            Forgot Password?
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input id="password" type="password" placeholder="••••••••" class="w-full pr-10">
+                        <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                
 <!-- Access Cipher -->
 <div class="space-y-1">
     <label class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Access Cipher</label>
