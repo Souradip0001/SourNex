@@ -8,6 +8,26 @@ window.currentUser = null;
 window.isUserLoggedIn = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        isRecoveryMode = true;
+        isSignUpMode = false;
+        awaitingOtp = false;
+
+        authTitle.textContent = "RESET PASSWORD";
+        submitBtn.textContent = "Send Recovery Code";
+
+        usernameContainer?.classList.add('hidden');
+        dobContainer?.classList.add('hidden');
+        confirmPasswordContainer?.classList.add('hidden');
+        apiKeyContainer?.classList.add('hidden');
+        termsContainer?.classList.add('hidden');
+        captchaContainer?.classList.add('hidden');
+    });
+}
+    
     
     const authOverlay = document.getElementById('auth-overlay');
     const authCloseBtn = document.getElementById('auth-close-btn');
@@ -51,7 +71,8 @@ document.querySelectorAll('.toggle-password').forEach(button => {
     let isSignUpMode = false;
     let awaitingOtp = false; // State flag to track OTP stage
     let pendingEmail = "";   // Holds email across OTP step
-
+let isRecoveryMode = false; 
+    
     // TOGGLE BETWEEN SIGN IN & SIGN UP MODE
     if (authToggleBtn) {
         authToggleBtn.addEventListener('click', (e) => {
@@ -99,6 +120,43 @@ document.querySelectorAll('.toggle-password').forEach(button => {
             submitBtn.disabled = true;
 
             try {
+                if (isRecoveryMode) {
+    if (!awaitingOtp) {
+        submitBtn.textContent = "Sending Code...";
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+
+        pendingEmail = email;
+        awaitingOtp = true;
+        otpStepContainer?.classList.remove('hidden');
+        confirmPasswordContainer?.classList.remove('hidden');
+        submitBtn.textContent = "Update Password";
+    } else {
+        const otpToken = document.getElementById('otp-code').value.trim();
+        const newPassword = document.getElementById('password').value;
+
+        submitBtn.textContent = "Updating...";
+
+        const { error: verifyError } = await supabaseClient.auth.verifyOtp({
+            email: pendingEmail,
+            token: otpToken,
+            type: 'recovery'
+        });
+        if (verifyError) throw verifyError;
+
+        const { error: updateError } = await supabaseClient.auth.updateUser({
+            password: newPassword
+        });
+        if (updateError) throw updateError;
+
+        alert("Password updated successfully!");
+        isRecoveryMode = false;
+        awaitingOtp = false;
+        location.reload();
+    }
+    return;
+                }
+                
                 // STAGE A: USER IS ENTERING 6-DIGIT OTP
                 if (awaitingOtp) {
                     const otpToken = document.getElementById('otp-code').value.trim();
