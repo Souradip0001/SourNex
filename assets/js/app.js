@@ -328,24 +328,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return uniqueId;
     }
 
-    // --- PIPELINE EXECUTION ENGINE ---
-    async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
-                signal: abortSignal 
-            });
-            const data = await response.json();
-            return data.text || `Server Error: ${data.error}`;
-        } catch (err) {
-            if (err.name == 'AbortError') {
-                return `Generation terminated by operator. Core context detached.`;
-            }
-            return `Secure link failed: ${err.message}`;
+    // --- PIPELINE EXECUTION ENGINE --//
+    // --- ENHANCED PIPELINE EXECUTION ENGINE WITH ERROR HANDLING ---
+async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
+            signal: abortSignal 
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            // Handle HTTP errors or backend OpenRouter error messages
+            const errorMsg = data.error || data.message || `HTTP ${response.status}`;
+            return `[Execution Error]: ${errorMsg}`;
         }
+
+        return data.text || "No response returned from layer.";
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            return `Generation terminated by operator. Core context detached.`;
+        }
+        return `[Connection Error]: ${err.message}`;
     }
+}
+    
 
     async function handleExecute() {
         if (isGenerating) {
@@ -379,13 +389,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentAbortController = new AbortController();
         setButtonStateLoading();
+// Replace this section inside handleExecute() in app.js:
+const liveOutputText = await fetchLiveAIResponse(
+    selectedModelId, 
+    promptText, 
+    lastMessageContext, 
+    currentAbortController.signal
+);
 
-        const liveOutputText = await fetchLiveAIResponse(
-            selectedModelId, 
-            promptText, 
-            lastMessageContext, 
-            currentAbortController.signal
-        );
+if (textTarget) textTarget.innerText = liveOutputText;
+
+// Improved context protection check:
+const isErrorOutput = liveOutputText.startsWith("[Execution Error]") || 
+                      liveOutputText.startsWith("[Connection Error]") || 
+                      liveOutputText.toLowerCase().includes("gateway exception") ||
+                      liveOutputText.toLowerCase().includes("insufficient credits") ||
+                      liveOutputText.toLowerCase().includes("resourceexhausted");
+
+if (liveOutputText && !isErrorOutput) {
+    lastMessageContext = liveOutputText;
+} else {
+    console.warn("Error layer detected. Preserving previous conversation context.");
+}
+        
         
         if (textTarget) textTarget.innerText = liveOutputText;
 
