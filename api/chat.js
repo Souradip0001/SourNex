@@ -10,7 +10,6 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'OpenRouter Key missing from Vercel environments dashboard.' });
     }
 
-    // NEW FEAT: If frontend makes a GET request, serve the filtered model list safely via server side
     if (req.method === 'GET') {
         try {
             const response = await fetch('https://openrouter.ai/api/v1/models', {
@@ -19,19 +18,53 @@ export default async function handler(req, res) {
             const data = await response.json();
             return res.status(200).json(data);
         } catch (err) {
-            return res.status(500).json({ error: 'Failed to fetch directory from server side: ' + err.message });
+            return res.status(500).json({ error: 'Failed to fetch directory: ' + err.message });
         }
     }
 
-    // Standard POST generation route
     if (req.method === 'POST') {
         try {
-            const { model, currentPrompt, fallbackContext } = req.body;
-            const activeTargetModel = model || 'openrouter/free';
+            const { action, fullChatHistory, model, currentPrompt, fallbackContext } = req.body;
 
-            let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform. You must chat beautifully, cleanly, and naturally like a human dialogue thread.";
+            // --- FEATURE: BACKGROUND MEMORY GENERATOR ---
+            if (action === 'SUMMARIZE_MEMORY') {
+                const summaryPrompt = `Analyze this ongoing conversation history and compress it into a concise state JSON block.
+Include:
+1. "summary": Brief 2-sentence overview of the discussion.
+2. "key_facts": Important constraints, decisions, or user preferences mentioned (bullet points).
+3. "current_task": What the user is currently trying to accomplish.
+
+Respond ONLY with valid JSON. No Markdown block wrappers.
+
+Chat History:
+"""
+${fullChatHistory}
+"""`;
+
+                const summaryResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'openrouter/free', // Fast free router for background tasks
+                        messages: [{ role: 'user', content: summaryPrompt }]
+                    })
+                });
+
+                const summaryData = await summaryResponse.json();
+                const jsonText = summaryData.choices?.[0]?.message?.content || '{}';
+
+                return res.status(200).json({ memoryJson: jsonText });
+            }
+
+            // --- STANDARD CHAT EXECUTION ---
+            const activeTargetModel = model || 'openrouter/free';
+            
+            let structuralSystemPrompt = "You are an intelligent, elegant AI companion running inside the Sournex luxury workspace platform.";
             if (fallbackContext) {
-                structuralSystemPrompt += `\n\nCONTEXT LAYER HISTORY:\n"""\n${fallbackContext}\n"""\nFollow up on this sequence context naturally.`;
+                structuralSystemPrompt += `\n\n[CONCISE MEMORY CONTEXT LAYER]:\n${fallbackContext}\n\nContinue the dialogue based on these remembered facts and context.`;
             }
 
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -52,12 +85,12 @@ export default async function handler(req, res) {
             });
 
             const data = await response.json();
-            
+
             if (data.choices && data.choices[0] && data.choices[0].message) {
                 return res.status(200).json({ text: data.choices[0].message.content });
             } else {
-                const errMsg = data.error ? data.error.message : 'Selected target model structure dropped during transit.';
-                return res.status(200).json({ text: `Gateway exception error node: ${errMsg}` });
+                const errMsg = data.error ? data.error.message : 'Model response stream failed.';
+                return res.status(502).json({ error: errMsg });
             }
         } catch (err) {
             return res.status(500).json({ error: err.message });
