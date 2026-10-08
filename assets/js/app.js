@@ -3,6 +3,41 @@
  * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
+    // Add this helper function inside app.js:
+async function generateCompressedMemory() {
+    // 1. Gather chat thread text from UI
+    const chatThread = document.getElementById('chat-thread');
+    if (!chatThread) return '';
+
+    const textNodes = Array.from(chatThread.querySelectorAll('.bg-luxury-surface'))
+        .map(el => el.innerText.trim())
+        .join('\n---\n');
+
+    if (!textNodes || textNodes.length < 50) return lastMessageContext; // Skip if chat is too short
+
+    try {
+        if (statusText) statusText.textContent = "Compressing context memory...";
+
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'SUMMARIZE_MEMORY',
+                fullChatHistory: textNodes
+            })
+        });
+
+        const data = await response.json();
+        if (data.memoryJson) {
+            console.log("New Condensed Memory Block Created:", data.memoryJson);
+            return data.memoryJson; // Returns minimal JSON string
+        }
+    } catch (err) {
+        console.warn("Memory compression failed, falling back to last context string:", err);
+    }
+    return lastMessageContext;
+}
+    
     // Force allow user text highlighting across the thread
     const selectionStyle = document.createElement('style');
     selectionStyle.innerHTML = `
@@ -167,12 +202,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isWorkingFine = !isDeprecated && !isUnstable;
 
                 modelMetadataRegistry[model.id] = {
-                    name: model.name || model.id.split('/')[1].replace(':free', ''),
+                    name: model.name || model.id.split('/')[1].replace(':Unlimited', ''),
                     short: model.id.split('/')[1].substring(0, 3).toUpperCase()
                 };
 
                 const btn = document.createElement('button');
-                let visualName = model.name.replace('(free)', '').replace(':free', '').trim();
+                let visualName = model.name.replace('(free)', '').replace(':Unlimited', '').trim();
 
                 if (isWorkingFine) {
                     btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-800 text-zinc-400 bg-zinc-950/40 hover:text-white hover:border-zinc-700 transition-all duration-150 focus:outline-none cursor-pointer";
@@ -187,16 +222,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.setAttribute('data-model-id', model.id);
                 
                 if (isWorkingFine) {
-                    btn.addEventListener('click', () => {
-                        if (isGenerating) return; 
-                        document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
-                            b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
-                            b.classList.add('border-zinc-800', 'text-zinc-400');
-                        });
-                        btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
-                        btn.classList.remove('border-zinc-800', 'text-zinc-400');
-                        selectedModelId = model.id;
-                    });
+                    btn.addEventListener('click', async () => {
+    if (isGenerating) return; 
+    
+    // 1. Highlight the selected model button in the UI
+    document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
+        b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
+        b.classList.add('border-zinc-800', 'text-zinc-400');
+    });
+    btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
+    btn.classList.remove('border-zinc-800', 'text-zinc-400');
+    
+    // 2. Set the new active model ID
+    selectedModelId = model.id;
+
+    // 3. Trigger context compression only when switching models
+    lastMessageContext = await generateCompressedMemory();
+
+    // 4. Reset status text after compression completes
+    if (statusText) {
+        statusText.textContent = `${activeOnlineCount} Layers Online`;
+    }
+});
+                    
 
                     if (dynamicModelDock) dynamicModelDock.appendChild(btn);
 
@@ -423,13 +471,20 @@ async function handleExecute() {
             const modelName = modelMetadataRegistry[currentTargetModel]?.name || currentTargetModel;
             textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${modelName})...</span>`;
         }
+// Inside the for-loop in handleExecute():
+if (i > 0) {
+    // Inside the for-loop in handleExecute():
+if (i > 0) {
+    // Model auto-switched due to error: summarize history before calling backup model
+    lastMessageContext = await generateCompressedMemory();
+}
 
-        const liveOutputText = await fetchLiveAIResponse(
-            currentTargetModel, 
-            promptText, 
-            lastMessageContext, 
-            currentAbortController.signal
-        );
+const liveOutputText = await fetchLiveAIResponse(
+    currentTargetModel, 
+    promptText, 
+    lastMessageContext, 
+    currentAbortController.signal
+);
 
         // Sanitize output text
         const normalizedText = (liveOutputText || '').trim().toLowerCase();
