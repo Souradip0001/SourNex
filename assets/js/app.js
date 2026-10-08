@@ -358,6 +358,7 @@ async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abor
     
 
     // --- ENHANCED PIPELINE EXECUTION ENGINE ---
+// --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE ---
 async function handleExecute() {
     // 1. Abort ongoing request if user clicks Stop
     if (isGenerating) {
@@ -394,42 +395,78 @@ async function handleExecute() {
     const textTargetId = appendModelSkeleton(selectedModelId, promptText);
     const textTarget = document.getElementById(`${textTargetId}-text`);
 
-    // 7. Initialize AbortController & set button UI to "Stop" loading state
     currentAbortController = new AbortController();
     setButtonStateLoading();
 
-    // 8. Trigger live API request
-    const liveOutputText = await fetchLiveAIResponse(
-        selectedModelId, 
-        promptText, 
-        lastMessageContext, 
-        currentAbortController.signal
-    );
-    
-    // 9. Update UI card with returned text or error message
-    if (textTarget) textTarget.innerText = liveOutputText;
+    // 7. Extract all enabled dynamic model IDs to build fallback queue
+    const activeDockButtons = Array.from(document.querySelectorAll('#dynamic-model-dock button:not([disabled])'));
+    const candidateModelIds = activeDockButtons
+        .map(btn => btn.getAttribute('data-model-id'))
+        .filter(Boolean);
 
-    // 10. Robust check for upstream errors / exceptions
-    const normalizedText = (liveOutputText || '').toLowerCase();
-    const isErrorDetected = 
-        !liveOutputText ||
-        liveOutputText.startsWith("[Execution Error]") ||
-        liveOutputText.startsWith("[Connection Error]") ||
-        normalizedText.includes("gateway exception") ||
-        normalizedText.includes("insufficient credits") ||
-        normalizedText.includes("resourceexhausted") ||
-        normalizedText.includes("provider returned error") ||
-        normalizedText.includes("generation terminated by operator") ||
-        normalizedText.includes("secure link failed");
+    // Order queue starting with user-selected model followed by other dynamic choices
+    const modelQueue = [
+        selectedModelId,
+        ...candidateModelIds.filter(id => id !== selectedModelId),
+        'openrouter/free' // Final safety network fallback
+    ];
 
-    // 11. Protect global conversation context from error pollution
-    if (!isErrorDetected) {
-        lastMessageContext = liveOutputText;
-    } else {
-        console.warn("Error/Exception response detected. Preserving clean previous context.");
+    let successfulResponse = '';
+    let usedModelId = selectedModelId;
+
+    // 8. Auto-Switching Loop: Try each model sequentially until a valid text response is received
+    for (let i = 0; i < modelQueue.length; i++) {
+        const currentTargetModel = modelQueue[i];
+        
+        // Show auto-switching status to user if retrying
+        if (i > 0 && textTarget) {
+            const modelName = modelMetadataRegistry[currentTargetModel]?.name || currentTargetModel;
+            textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${modelName})...</span>`;
+        }
+
+        const liveOutputText = await fetchLiveAIResponse(
+            currentTargetModel, 
+            promptText, 
+            lastMessageContext, 
+            currentAbortController.signal
+        );
+
+        // Sanitize output text
+        const normalizedText = (liveOutputText || '').trim().toLowerCase();
+
+        // Detect unwanted outputs (Errors, Safety flags, Gateway exceptions)
+        const isInvalidOutput = 
+            !liveOutputText ||
+            liveOutputText.startsWith("[Execution Error]") ||
+            liveOutputText.startsWith("[Connection Error]") ||
+            normalizedText.startsWith("user safety:") ||
+            normalizedText.includes("gateway exception") ||
+            normalizedText.includes("insufficient credits") ||
+            normalizedText.includes("resourceexhausted") ||
+            normalizedText.includes("provider returned error") ||
+            normalizedText.includes("generation terminated by operator") ||
+            normalizedText.includes("secure link failed");
+
+        if (!isInvalidOutput) {
+            successfulResponse = liveOutputText;
+            usedModelId = currentTargetModel;
+            break; // Valid response received; break out of retry loop
+        } else {
+            console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
+        }
     }
 
-    // 12. Increment output layer & restore button state
+    // 9. Update UI with final result
+    if (textTarget) {
+        if (successfulResponse) {
+            textTarget.innerText = successfulResponse;
+            lastMessageContext = successfulResponse; // Update clean chat context
+        } else {
+            textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
+        }
+    }
+
+    // 10. Increment output layer & restore button state
     outputLayerCounter++;
     
     if (checkGuestAccess()) {
@@ -438,6 +475,7 @@ async function handleExecute() {
     
     if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
 }
+    
     
 
     // --- GLOBAL EVENT REGISTRATION ---
