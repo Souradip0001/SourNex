@@ -17,19 +17,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleMsg = document.getElementById('toggle-msg');
     const submitBtn = document.getElementById('btn-submit');
     const guestBypassBtn = document.getElementById('auth-guest-bypass');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+
     // PASSWORD VISIBILITY TOGGLE LOGIC
-document.querySelectorAll('.toggle-password').forEach(button => {
-    button.addEventListener('click', () => {
-        const input = button.parentElement.querySelector('input');
-        if (input) {
-            const isPassword = input.type === 'password';
-            input.type = isPassword ? 'text' : 'password';
-            button.classList.toggle('text-luxury-gold', isPassword);
-            button.classList.toggle('text-zinc-500', !isPassword);
-        }
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = button.parentElement.querySelector('input');
+            if (input) {
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                button.classList.toggle('text-luxury-gold', isPassword);
+                button.classList.toggle('text-zinc-500', !isPassword);
+            }
+        });
     });
-});
-    
 
     // Input containers
     const usernameContainer = document.getElementById('username-container');
@@ -49,14 +50,16 @@ document.querySelectorAll('.toggle-password').forEach(button => {
     const sendBtn = document.getElementById('send-btn');
 
     let isSignUpMode = false;
-    let awaitingOtp = false; // State flag to track OTP stage
-    let pendingEmail = "";   // Holds email across OTP step
+    let awaitingOtp = false;     // State flag to track OTP stage
+    let pendingEmail = "";       // Holds email across OTP step
+    let isRecoveryMode = false; // State flag for password reset mode
 
     // TOGGLE BETWEEN SIGN IN & SIGN UP MODE
     if (authToggleBtn) {
         authToggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
             isSignUpMode = !isSignUpMode;
+            isRecoveryMode = false;
             awaitingOtp = false;
             otpStepContainer?.classList.add('hidden');
 
@@ -88,6 +91,28 @@ document.querySelectorAll('.toggle-password').forEach(button => {
         });
     }
 
+    // FORGOT PASSWORD CLICK HANDLER
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            isRecoveryMode = true;
+            isSignUpMode = false;
+            awaitingOtp = false;
+
+            authTitle.textContent = "RESET PASSWORD";
+            submitBtn.textContent = "Send Recovery Code";
+
+            // Hide non-essential registration fields
+            usernameContainer?.classList.add('hidden');
+            dobContainer?.classList.add('hidden');
+            confirmPasswordContainer?.classList.add('hidden');
+            apiKeyContainer?.classList.add('hidden');
+            termsContainer?.classList.add('hidden');
+            captchaContainer?.classList.add('hidden');
+            otpStepContainer?.classList.add('hidden');
+        });
+    }
+
     // FORM SUBMISSION HANDLER
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
@@ -99,7 +124,56 @@ document.querySelectorAll('.toggle-password').forEach(button => {
             submitBtn.disabled = true;
 
             try {
-                // STAGE A: USER IS ENTERING 6-DIGIT OTP
+                // STAGE A: FORGOT PASSWORD / RECOVERY FLOW
+                if (isRecoveryMode) {
+                    if (!awaitingOtp) {
+                        // Request Recovery OTP via Brevo / Supabase
+                        submitBtn.textContent = "Sending Code...";
+                        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+                        if (error) throw error;
+
+                        pendingEmail = email;
+                        awaitingOtp = true;
+                        
+                        // Reveal OTP and New Password fields
+                        otpStepContainer?.classList.remove('hidden');
+                        confirmPasswordContainer?.classList.remove('hidden');
+                        submitBtn.textContent = "Update Password";
+                    } else {
+                        // Verify OTP & Apply New Password
+                        const otpToken = document.getElementById('otp-code').value.trim();
+                        const newPassword = document.getElementById('password').value;
+
+                        if (!otpToken || otpToken.length !== 6) {
+                            alert("Please enter a valid 6-digit OTP code.");
+                            return;
+                        }
+
+                        submitBtn.textContent = "Updating...";
+
+                        // Verify Recovery Token
+                        const { error: verifyError } = await supabaseClient.auth.verifyOtp({
+                            email: pendingEmail,
+                            token: otpToken,
+                            type: 'recovery'
+                        });
+                        if (verifyError) throw verifyError;
+
+                        // Set New Password
+                        const { error: updateError } = await supabaseClient.auth.updateUser({
+                            password: newPassword
+                        });
+                        if (updateError) throw updateError;
+
+                        alert("Password updated successfully! Please sign in with your new password.");
+                        isRecoveryMode = false;
+                        awaitingOtp = false;
+                        location.reload();
+                    }
+                    return;
+                }
+
+                // STAGE B: USER IS ENTERING 6-DIGIT OTP (SIGNUP)
                 if (awaitingOtp) {
                     const otpToken = document.getElementById('otp-code').value.trim();
                     if (!otpToken || otpToken.length !== 6) {
@@ -109,11 +183,10 @@ document.querySelectorAll('.toggle-password').forEach(button => {
 
                     submitBtn.textContent = "Verifying Code...";
 
-                    // VERIFY OTP WITH SUPABASE
                     const { data, error } = await supabaseClient.auth.verifyOtp({
                         email: pendingEmail,
                         token: otpToken,
-                        type: 'signup' // or 'email' depending on template
+                        type: 'signup'
                     });
 
                     if (error) throw error;
@@ -123,7 +196,7 @@ document.querySelectorAll('.toggle-password').forEach(button => {
                     if (data.session) handleSessionUpdate(data.session);
 
                 } else if (isSignUpMode) {
-                    // STAGE B: USER SUBMITS SIGN-UP DETAILS TO REQUEST OTP
+                    // STAGE C: USER SUBMITS SIGN-UP DETAILS TO REQUEST OTP
                     const username = document.getElementById('username').value.trim();
                     const dob = document.getElementById('dob').value;
                     const confirmPassword = document.getElementById('confirm-password').value;
@@ -140,7 +213,6 @@ document.querySelectorAll('.toggle-password').forEach(button => {
 
                     submitBtn.textContent = "Sending Code...";
 
-                    // SIGN UP AND DISPATCH OTP
                     const { data, error } = await supabaseClient.auth.signUp({
                         email: email,
                         password: password,
@@ -154,11 +226,9 @@ document.querySelectorAll('.toggle-password').forEach(button => {
 
                     if (error) throw error;
 
-                    // Transition UI to OTP Verification Stage
                     pendingEmail = email;
                     awaitingOtp = true;
                     
-                    // Hide original input forms, show OTP field
                     usernameContainer?.classList.add('hidden');
                     dobContainer?.classList.add('hidden');
                     confirmPasswordContainer?.classList.add('hidden');
@@ -170,7 +240,7 @@ document.querySelectorAll('.toggle-password').forEach(button => {
                     submitBtn.textContent = "Confirm Security Code";
 
                 } else {
-                    // STAGE C: STANDARD SIGN IN
+                    // STAGE D: STANDARD SIGN IN
                     submitBtn.textContent = "Authenticating...";
 
                     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -187,7 +257,7 @@ document.querySelectorAll('.toggle-password').forEach(button => {
             } finally {
                 submitBtn.disabled = false;
                 if (!awaitingOtp) {
-                    submitBtn.textContent = isSignUpMode ? "Send OTP Code" : "Verify Credentials";
+                    submitBtn.textContent = isRecoveryMode ? "Send Recovery Code" : (isSignUpMode ? "Send OTP Code" : "Verify Credentials");
                 }
             }
         });
@@ -225,42 +295,36 @@ document.querySelectorAll('.toggle-password').forEach(button => {
 
     // SESSION HANDLERS
     function handleSessionUpdate(session) {
-    // 1. DO NOT auto-login while waiting for the user to type the OTP code
-    if (awaitingOtp) {
-        disableChatInterface();
-        return;
-    }
-
-    if (session && session.user) {
-        // 2. CHECK IF EMAIL IS CONFIRMED
-        const isEmailVerified = session.user.email_confirmed_at !== null;
-
-        if (!isEmailVerified) {
-            // Force sign out background session if unverified
-            supabaseClient.auth.signOut();
-            window.currentUser = null;
-            window.isUserLoggedIn = false;
+        if (awaitingOtp) {
             disableChatInterface();
             return;
         }
 
-        // 3. FULLY VERIFIED USER LOGGED IN
-        window.currentUser = session.user;
-        window.isUserLoggedIn = true;
+        if (session && session.user) {
+            const isEmailVerified = session.user.email_confirmed_at !== null;
 
-        const metadata = session.user.user_metadata || {};
-        const username = metadata.username || session.user.email.split('@')[0];
+            if (!isEmailVerified) {
+                supabaseClient.auth.signOut();
+                window.currentUser = null;
+                window.isUserLoggedIn = false;
+                disableChatInterface();
+                return;
+            }
 
-        authOverlay?.classList.add('hidden');
-        enableChatInterface("Authenticated", username);
-    } else {
-        window.currentUser = null;
-        window.isUserLoggedIn = false;
-        disableChatInterface();
+            window.currentUser = session.user;
+            window.isUserLoggedIn = true;
+
+            const metadata = session.user.user_metadata || {};
+            const username = metadata.username || session.user.email.split('@')[0];
+
+            authOverlay?.classList.add('hidden');
+            enableChatInterface("Authenticated", username);
+        } else {
+            window.currentUser = null;
+            window.isUserLoggedIn = false;
+            disableChatInterface();
+        }
     }
-    }
-    
-    
 
     function enableChatInterface(statusLabel, username) {
         if (accountStatusLabel) accountStatusLabel.textContent = statusLabel;
@@ -306,4 +370,4 @@ document.querySelectorAll('.toggle-password').forEach(button => {
         handleSessionUpdate(session);
     });
 });
-                                       
+                                  
