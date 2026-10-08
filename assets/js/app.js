@@ -357,83 +357,88 @@ async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abor
 }
     
 
-    async function handleExecute() {
-        if (isGenerating) {
-            if (currentAbortController) currentAbortController.abort();
-            setButtonStateActive();
-            return;
-        }
-
-        if (!checkGuestAccess()) return;
-
-        const promptText = masterInput ? masterInput.value.trim() : '';
-        if (!promptText || !selectedModelId) return;
-
-        if (!window.isUserLoggedIn) {
-            let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
-            currentCount++;
-            localStorage.setItem('snx_guest_chat_count', currentCount.toString());
-
-            if (currentCount >= 10) {
-                const twoHoursInMs = 2 * 60 * 60 * 1000; 
-                const expiryTime = Date.now() + twoHoursInMs;
-                localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
-            }
-        }
-
-        appendUserMessage(promptText);
-        if (masterInput) masterInput.value = ''; 
-
-        const textTargetId = appendModelSkeleton(selectedModelId, promptText);
-        const textTarget = document.getElementById(`${textTargetId}-text`);
-
-        currentAbortController = new AbortController();
-        setButtonStateLoading();
-// Replace this section inside handleExecute() in app.js:
-const liveOutputText = await fetchLiveAIResponse(
-    selectedModelId, 
-    promptText, 
-    lastMessageContext, 
-    currentAbortController.signal
-);
-
-if (textTarget) textTarget.innerText = liveOutputText;
-
-// Improved context protection check:
-const isErrorOutput = liveOutputText.startsWith("[Execution Error]") || 
-                      liveOutputText.startsWith("[Connection Error]") || 
-                      liveOutputText.toLowerCase().includes("gateway exception") ||
-                      liveOutputText.toLowerCase().includes("insufficient credits") ||
-                      liveOutputText.toLowerCase().includes("resourceexhausted");
-
-if (liveOutputText && !isErrorOutput) {
-    lastMessageContext = liveOutputText;
-} else {
-    console.warn("Error layer detected. Preserving previous conversation context.");
-}
-        
-        
-        if (textTarget) textTarget.innerText = liveOutputText;
-
-        if (
-            liveOutputText && 
-            !liveOutputText.includes("Server Error:") && 
-            !liveOutputText.includes("Gateway exception") && 
-            !liveOutputText.includes("Generation terminated by operator") && 
-            !liveOutputText.includes("Secure link failed:")
-        ) {
-            lastMessageContext = liveOutputText;
-        } else {
-            console.log("Exception stream detected. Retaining clean historical context layer.");
-        }
-
-        outputLayerCounter++;
-        
-        if (checkGuestAccess()) {
-            setButtonStateActive();
-        }
-        if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
+    // --- ENHANCED PIPELINE EXECUTION ENGINE ---
+async function handleExecute() {
+    // 1. Abort ongoing request if user clicks Stop
+    if (isGenerating) {
+        if (currentAbortController) currentAbortController.abort();
+        setButtonStateActive();
+        return;
     }
+
+    // 2. Validate Guest Access Limits
+    if (!checkGuestAccess()) return;
+
+    // 3. Read and sanitize user input
+    const promptText = masterInput ? masterInput.value.trim() : '';
+    if (!promptText || !selectedModelId) return;
+
+    // 4. Update guest message quota in LocalStorage
+    if (!window.isUserLoggedIn) {
+        let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
+        currentCount++;
+        localStorage.setItem('snx_guest_chat_count', currentCount.toString());
+
+        if (currentCount >= 10) {
+            const twoHoursInMs = 2 * 60 * 60 * 1000; 
+            const expiryTime = Date.now() + twoHoursInMs;
+            localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
+        }
+    }
+
+    // 5. Render user prompt to UI and clear input field
+    appendUserMessage(promptText);
+    if (masterInput) masterInput.value = ''; 
+
+    // 6. Create loading skeleton for AI response
+    const textTargetId = appendModelSkeleton(selectedModelId, promptText);
+    const textTarget = document.getElementById(`${textTargetId}-text`);
+
+    // 7. Initialize AbortController & set button UI to "Stop" loading state
+    currentAbortController = new AbortController();
+    setButtonStateLoading();
+
+    // 8. Trigger live API request
+    const liveOutputText = await fetchLiveAIResponse(
+        selectedModelId, 
+        promptText, 
+        lastMessageContext, 
+        currentAbortController.signal
+    );
+    
+    // 9. Update UI card with returned text or error message
+    if (textTarget) textTarget.innerText = liveOutputText;
+
+    // 10. Robust check for upstream errors / exceptions
+    const normalizedText = (liveOutputText || '').toLowerCase();
+    const isErrorDetected = 
+        !liveOutputText ||
+        liveOutputText.startsWith("[Execution Error]") ||
+        liveOutputText.startsWith("[Connection Error]") ||
+        normalizedText.includes("gateway exception") ||
+        normalizedText.includes("insufficient credits") ||
+        normalizedText.includes("resourceexhausted") ||
+        normalizedText.includes("provider returned error") ||
+        normalizedText.includes("generation terminated by operator") ||
+        normalizedText.includes("secure link failed");
+
+    // 11. Protect global conversation context from error pollution
+    if (!isErrorDetected) {
+        lastMessageContext = liveOutputText;
+    } else {
+        console.warn("Error/Exception response detected. Preserving clean previous context.");
+    }
+
+    // 12. Increment output layer & restore button state
+    outputLayerCounter++;
+    
+    if (checkGuestAccess()) {
+        setButtonStateActive();
+    }
+    
+    if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
+}
+    
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
