@@ -434,7 +434,7 @@ async function handleExecute() {
             localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
         }
     }
-
+p
     // 5. Render user prompt to UI and clear input field
     appendUserMessage(promptText);
     if (masterInput) masterInput.value = ''; 
@@ -471,8 +471,6 @@ async function handleExecute() {
             const modelName = modelMetadataRegistry[currentTargetModel]?.name || currentTargetModel;
             textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${modelName})...</span>`;
         }
-// Inside the for-loop in handleExecute():
-if (i > 0) {
     // Inside the for-loop in handleExecute():
 if (i > 0) {
     // Model auto-switched due to error: summarize history before calling backup model
