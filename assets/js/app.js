@@ -3,53 +3,7 @@
  * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // Add this helper function inside app.js:
-async function generateCompressedMemory() {
-    // 1. Gather chat thread text from UI
-    const chatThread = document.getElementById('chat-thread');
-    if (!chatThread) return '';
-
-    const textNodes = Array.from(chatThread.querySelectorAll('.bg-luxury-surface'))
-        .map(el => el.innerText.trim())
-        .join('\n---\n');
-
-    if (!textNodes || textNodes.length < 50) return lastMessageContext; // Skip if chat is too short
-
-    try {
-        if (statusText) statusText.textContent = "Compressing context memory...";
-
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'SUMMARIZE_MEMORY',
-                fullChatHistory: textNodes
-            })
-        });
-
-        const data = await response.json();
-        if (data.memoryJson) {
-            console.log("New Condensed Memory Block Created:", data.memoryJson);
-            return data.memoryJson; // Returns minimal JSON string
-        }
-    } catch (err) {
-        console.warn("Memory compression failed, falling back to last context string:", err);
-    }
-    return lastMessageContext;
-}
-    
-    // Force allow user text highlighting across the thread
-    const selectionStyle = document.createElement('style');
-    selectionStyle.innerHTML = `
-        #chat-thread, #chat-thread * {
-            user-select: text !important;
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
-        }
-    `;
-    document.head.appendChild(selectionStyle);
-        
+    // --- DOM ELEMENT SELECTIONS ---
     const chatThread = document.getElementById('chat-thread');
     const masterInput = document.getElementById('master-input');
     const sendBtn = document.getElementById('send-btn');
@@ -81,6 +35,51 @@ async function generateCompressedMemory() {
     let currentAbortController = null; 
     let isGenerating = false;
     let isDockExpanded = false;
+
+    // --- FORCE ALLOW TEXT SELECTION ---
+    const selectionStyle = document.createElement('style');
+    selectionStyle.innerHTML = `
+        #chat-thread, #chat-thread * {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+        }
+    `;
+    document.head.appendChild(selectionStyle);
+
+    // --- HELPER: CONTEXT MEMORY COMPRESSION ---
+    async function generateCompressedMemory() {
+        if (!chatThread) return lastMessageContext;
+
+        const textNodes = Array.from(chatThread.querySelectorAll('.bg-luxury-surface'))
+            .map(el => el.innerText.trim())
+            .join('\n---\n');
+
+        if (!textNodes || textNodes.length < 50) return lastMessageContext;
+
+        try {
+            if (statusText) statusText.textContent = "Compressing context memory...";
+
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'SUMMARIZE_MEMORY',
+                    fullChatHistory: textNodes
+                })
+            });
+
+            const data = await response.json();
+            if (data && data.memoryJson) {
+                console.log("New Condensed Memory Block Created:", data.memoryJson);
+                return data.memoryJson;
+            }
+        } catch (err) {
+            console.warn("Memory compression failed, falling back to last context string:", err);
+        }
+        return lastMessageContext;
+    }
 
     // --- SOURNEX ACCORDION CONTROL SLIDER ---
     if (dockExpandTrigger) {
@@ -166,12 +165,12 @@ async function generateCompressedMemory() {
             const res = await fetch('/api/chat', { method: 'GET' });
             const data = await res.json();
             
-            if (!data || !data.data || !Array.isArray(data.data) || data.data.length == 0) {
+            if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
                 throw new Error(data.error || "Index data empty or invalid backend format");
             }
 
             const freeChatModels = data.data.filter(model => {
-                const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) == 0);
+                const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) === 0);
                 const modelIdLower = model.id.toLowerCase();
                 const nameLower = (model.name || '').toLowerCase();
                 
@@ -182,7 +181,7 @@ async function generateCompressedMemory() {
                 return isFree && !isUtility;
             });
 
-            if (freeChatModels.length == 0) {
+            if (freeChatModels.length === 0) {
                 setupFallbackModel();
                 return;
             }
@@ -202,12 +201,12 @@ async function generateCompressedMemory() {
                 const isWorkingFine = !isDeprecated && !isUnstable;
 
                 modelMetadataRegistry[model.id] = {
-                    name: model.name || model.id.split('/')[1].replace(':Unlimited', ''),
+                    name: model.name || model.id.split('/')[1].replace(':free', ''),
                     short: model.id.split('/')[1].substring(0, 3).toUpperCase()
                 };
 
                 const btn = document.createElement('button');
-                let visualName = model.name.replace('(free)', '').replace(':Unlimited', '').trim();
+                let visualName = model.name.replace('(free)', '').replace(':free', '').trim();
 
                 if (isWorkingFine) {
                     btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-800 text-zinc-400 bg-zinc-950/40 hover:text-white hover:border-zinc-700 transition-all duration-150 focus:outline-none cursor-pointer";
@@ -223,28 +222,22 @@ async function generateCompressedMemory() {
                 
                 if (isWorkingFine) {
                     btn.addEventListener('click', async () => {
-    if (isGenerating) return; 
-    
-    // 1. Highlight the selected model button in the UI
-    document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
-        b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
-        b.classList.add('border-zinc-800', 'text-zinc-400');
-    });
-    btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
-    btn.classList.remove('border-zinc-800', 'text-zinc-400');
-    
-    // 2. Set the new active model ID
-    selectedModelId = model.id;
+                        if (isGenerating) return; 
+                        
+                        document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
+                            b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
+                            b.classList.add('border-zinc-800', 'text-zinc-400');
+                        });
+                        btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
+                        btn.classList.remove('border-zinc-800', 'text-zinc-400');
+                        
+                        selectedModelId = model.id;
+                        lastMessageContext = await generateCompressedMemory();
 
-    // 3. Trigger context compression only when switching models
-    lastMessageContext = await generateCompressedMemory();
-
-    // 4. Reset status text after compression completes
-    if (statusText) {
-        statusText.textContent = `${activeOnlineCount} Layers Online`;
-    }
-});
-                    
+                        if (statusText) {
+                            statusText.textContent = `${activeOnlineCount} Layers Online`;
+                        }
+                    });
 
                     if (dynamicModelDock) dynamicModelDock.appendChild(btn);
 
@@ -376,160 +369,136 @@ async function generateCompressedMemory() {
         return uniqueId;
     }
 
-    // --- PIPELINE EXECUTION ENGINE --//
-    // --- ENHANCED PIPELINE EXECUTION ENGINE WITH ERROR HANDLING ---
-async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
-    try {
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
-            signal: abortSignal 
-        });
+    // --- PIPELINE EXECUTION ENGINE ---
+    async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
+                signal: abortSignal 
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok || data.error) {
-            // Handle HTTP errors or backend OpenRouter error messages
-            const errorMsg = data.error || data.message || `HTTP ${response.status}`;
-            return `[Execution Error]: ${errorMsg}`;
-        }
+            if (!response.ok || data.error) {
+                const errorMsg = data.error || data.message || `HTTP ${response.status}`;
+                return `[Execution Error]: ${errorMsg}`;
+            }
 
-        return data.text || "No response returned from layer.";
-    } catch (err) {
-        if (err.name === 'AbortError') {
-            return `Generation terminated by operator. Core context detached.`;
-        }
-        return `[Connection Error]: ${err.message}`;
-    }
-}
-    
-
-    // --- ENHANCED PIPELINE EXECUTION ENGINE ---
-// --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE ---
-async function handleExecute() {
-    // 1. Abort ongoing request if user clicks Stop
-    if (isGenerating) {
-        if (currentAbortController) currentAbortController.abort();
-        setButtonStateActive();
-        return;
-    }
-
-    // 2. Validate Guest Access Limits
-    if (!checkGuestAccess()) return;
-
-    // 3. Read and sanitize user input
-    const promptText = masterInput ? masterInput.value.trim() : '';
-    if (!promptText || !selectedModelId) return;
-
-    // 4. Update guest message quota in LocalStorage
-    if (!window.isUserLoggedIn) {
-        let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
-        currentCount++;
-        localStorage.setItem('snx_guest_chat_count', currentCount.toString());
-
-        if (currentCount >= 10) {
-            const twoHoursInMs = 2 * 60 * 60 * 1000; 
-            const expiryTime = Date.now() + twoHoursInMs;
-            localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
+            return data.text || "No response returned from layer.";
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                return `Generation terminated by operator. Core context detached.`;
+            }
+            return `[Connection Error]: ${err.message}`;
         }
     }
-p
-    // 5. Render user prompt to UI and clear input field
-    appendUserMessage(promptText);
-    if (masterInput) masterInput.value = ''; 
 
-    // 6. Create loading skeleton for AI response
-    const textTargetId = appendModelSkeleton(selectedModelId, promptText);
-    const textTarget = document.getElementById(`${textTargetId}-text`);
+    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE ---
+    async function handleExecute() {
+        if (isGenerating) {
+            if (currentAbortController) currentAbortController.abort();
+            setButtonStateActive();
+            return;
+        }
 
-    currentAbortController = new AbortController();
-    setButtonStateLoading();
+        if (!checkGuestAccess()) return;
 
-    // 7. Extract all enabled dynamic model IDs to build fallback queue
-    const activeDockButtons = Array.from(document.querySelectorAll('#dynamic-model-dock button:not([disabled])'));
-    const candidateModelIds = activeDockButtons
-        .map(btn => btn.getAttribute('data-model-id'))
-        .filter(Boolean);
+        const promptText = masterInput ? masterInput.value.trim() : '';
+        if (!promptText || !selectedModelId) return;
 
-    // Order queue starting with user-selected model followed by other dynamic choices
-    const modelQueue = [
-        selectedModelId,
-        ...candidateModelIds.filter(id => id !== selectedModelId),
-        'openrouter/free' // Final safety network fallback
-    ];
+        if (!window.isUserLoggedIn) {
+            let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
+            currentCount++;
+            localStorage.setItem('snx_guest_chat_count', currentCount.toString());
 
-    let successfulResponse = '';
-    let usedModelId = selectedModelId;
+            if (currentCount >= 10) {
+                const twoHoursInMs = 2 * 60 * 60 * 1000; 
+                const expiryTime = Date.now() + twoHoursInMs;
+                localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
+            }
+        }
 
-    // 8. Auto-Switching Loop: Try each model sequentially until a valid text response is received
-    for (let i = 0; i < modelQueue.length; i++) {
-        const currentTargetModel = modelQueue[i];
+        appendUserMessage(promptText);
+        if (masterInput) masterInput.value = ''; 
+
+        const textTargetId = appendModelSkeleton(selectedModelId, promptText);
+        const textTarget = document.getElementById(`${textTargetId}-text`);
+
+        currentAbortController = new AbortController();
+        setButtonStateLoading();
+
+        const activeDockButtons = Array.from(document.querySelectorAll('#dynamic-model-dock button:not([disabled])'));
+        const candidateModelIds = activeDockButtons
+            .map(btn => btn.getAttribute('data-model-id'))
+            .filter(Boolean);
+
+        const modelQueue = [
+            selectedModelId,
+            ...candidateModelIds.filter(id => id !== selectedModelId),
+            'openrouter/free'
+        ];
+
+        let successfulResponse = '';
+        let usedModelId = selectedModelId;
+
+        for (let i = 0; i < modelQueue.length; i++) {
+            const currentTargetModel = modelQueue[i];
+            
+            if (i > 0 && textTarget) {
+                const modelName = modelMetadataRegistry[currentTargetModel]?.name || currentTargetModel;
+                textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${modelName})...</span>`;
+                lastMessageContext = await generateCompressedMemory();
+            }
+
+            const liveOutputText = await fetchLiveAIResponse(
+                currentTargetModel, 
+                promptText, 
+                lastMessageContext, 
+                currentAbortController.signal
+            );
+
+            const normalizedText = (liveOutputText || '').trim().toLowerCase();
+
+            const isInvalidOutput = 
+                !liveOutputText ||
+                liveOutputText.startsWith("[Execution Error]") ||
+                liveOutputText.startsWith("[Connection Error]") ||
+                normalizedText.startsWith("user safety:") ||
+                normalizedText.includes("gateway exception") ||
+                normalizedText.includes("insufficient credits") ||
+                normalizedText.includes("resourceexhausted") ||
+                normalizedText.includes("provider returned error") ||
+                normalizedText.includes("generation terminated by operator") ||
+                normalizedText.includes("secure link failed");
+
+            if (!isInvalidOutput) {
+                successfulResponse = liveOutputText;
+                usedModelId = currentTargetModel;
+                break;
+            } else {
+                console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
+            }
+        }
+
+        if (textTarget) {
+            if (successfulResponse) {
+                textTarget.innerText = successfulResponse;
+                lastMessageContext = successfulResponse;
+            } else {
+                textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
+            }
+        }
+
+        outputLayerCounter++;
         
-        // Show auto-switching status to user if retrying
-        if (i > 0 && textTarget) {
-            const modelName = modelMetadataRegistry[currentTargetModel]?.name || currentTargetModel;
-            textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${modelName})...</span>`;
+        if (checkGuestAccess()) {
+            setButtonStateActive();
         }
-    // Inside the for-loop in handleExecute():
-if (i > 0) {
-    // Model auto-switched due to error: summarize history before calling backup model
-    lastMessageContext = await generateCompressedMemory();
-}
-
-const liveOutputText = await fetchLiveAIResponse(
-    currentTargetModel, 
-    promptText, 
-    lastMessageContext, 
-    currentAbortController.signal
-);
-
-        // Sanitize output text
-        const normalizedText = (liveOutputText || '').trim().toLowerCase();
-
-        // Detect unwanted outputs (Errors, Safety flags, Gateway exceptions)
-        const isInvalidOutput = 
-            !liveOutputText ||
-            liveOutputText.startsWith("[Execution Error]") ||
-            liveOutputText.startsWith("[Connection Error]") ||
-            normalizedText.startsWith("user safety:") ||
-            normalizedText.includes("gateway exception") ||
-            normalizedText.includes("insufficient credits") ||
-            normalizedText.includes("resourceexhausted") ||
-            normalizedText.includes("provider returned error") ||
-            normalizedText.includes("generation terminated by operator") ||
-            normalizedText.includes("secure link failed");
-
-        if (!isInvalidOutput) {
-            successfulResponse = liveOutputText;
-            usedModelId = currentTargetModel;
-            break; // Valid response received; break out of retry loop
-        } else {
-            console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
-        }
+        
+        if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
-
-    // 9. Update UI with final result
-    if (textTarget) {
-        if (successfulResponse) {
-            textTarget.innerText = successfulResponse;
-            lastMessageContext = successfulResponse; // Update clean chat context
-        } else {
-            textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
-        }
-    }
-
-    // 10. Increment output layer & restore button state
-    outputLayerCounter++;
-    
-    if (checkGuestAccess()) {
-        setButtonStateActive();
-    }
-    
-    if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
-}
-    
-    
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
