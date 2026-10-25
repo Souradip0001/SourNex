@@ -128,13 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
         let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
 
-        // Handle expired cooldown reset
+        // Handle expired cooldown reset & immediate UI restoration
         if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
             currentCount = 0;
             
-            // Re-enable UI elements immediately upon expiry reset
             if (masterInput) {
                 masterInput.disabled = false;
                 masterInput.placeholder = "Guest Access Active (10 free layers remaining)...";
@@ -148,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
             masterInput.placeholder = `Guest Access Active (${allocatedPromptsRemaining} free layers remaining)...`;
         }
 
-        // Check active cooldown status
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
@@ -168,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return true;
     }
-    
 
     // --- METADATA DIRECTORY ENGINE ---
     async function initializeModelMatrix() {
@@ -232,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.setAttribute('data-model-id', model.id);
                 
                 if (isWorkingFine) {
+                    // 🌟 MODEL SWITCH EVENT: Compresses full history only when switching models
                     btn.addEventListener('click', async () => {
                         if (isGenerating) return; 
                         
@@ -406,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE ---
+    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH CUMULATIVE CONTEXT ---
     async function handleExecute() {
         if (isGenerating) {
             if (currentAbortController) currentAbortController.abort();
@@ -493,10 +491,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // 9. Update UI with final result and ACCUMULATE conversation history
         if (textTarget) {
             if (successfulResponse) {
                 textTarget.innerText = successfulResponse;
-                lastMessageContext = successfulResponse;
+                
+                // 🌟 CUMULATIVE CONTEXT ACCUMULATION (Keeps rolling chat context within same model)
+                if (!lastMessageContext) {
+                    lastMessageContext = `User: ${promptText}\nAssistant: ${successfulResponse}`;
+                } else {
+                    lastMessageContext += `\nUser: ${promptText}\nAssistant: ${successfulResponse}`;
+                }
             } else {
                 textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
             }
