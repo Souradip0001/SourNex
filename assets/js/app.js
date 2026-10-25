@@ -128,12 +128,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
         let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
 
+        // Handle expired cooldown reset
+        if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
+            localStorage.removeItem('snx_cooldown_expiry');
+            localStorage.setItem('snx_guest_chat_count', '0');
+            currentCount = 0;
+            
+            // Re-enable UI elements immediately upon expiry reset
+            if (masterInput) {
+                masterInput.disabled = false;
+                masterInput.placeholder = "Guest Access Active (10 free layers remaining)...";
+            }
+            setButtonStateActive();
+        }
+
         const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
         
         if (masterInput && !cooldownExpiry) {
             masterInput.placeholder = `Guest Access Active (${allocatedPromptsRemaining} free layers remaining)...`;
         }
 
+        // Check active cooldown status
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
@@ -151,13 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
-            localStorage.removeItem('snx_cooldown_expiry');
-            localStorage.setItem('snx_guest_chat_count', '0');
-        }
-
         return true;
     }
+    
 
     // --- METADATA DIRECTORY ENGINE ---
     async function initializeModelMatrix() {
