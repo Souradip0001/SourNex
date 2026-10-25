@@ -2,8 +2,6 @@
  * SOURNEX ENGINE Core Orchestration Script
  * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
-import { PingEngine } from './ping-engine.js';
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM ELEMENT SELECTIONS ---
     const chatThread = document.getElementById('chat-thread');
@@ -406,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH LATENCY & MODEL CORRECTION ---
+    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH CUMULATIVE CONTEXT ---
     async function handleExecute() {
         if (isGenerating) {
             if (currentAbortController) currentAbortController.abort();
@@ -445,12 +443,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(btn => btn.getAttribute('data-model-id'))
             .filter(Boolean);
 
-        // Get model queue sorted by ping latency via PingEngine
-        const modelQueue = PingEngine.getSortedModelQueue(selectedModelId, candidateModelIds);
+        const modelQueue = [
+            selectedModelId,
+            ...candidateModelIds.filter(id => id !== selectedModelId),
+            'openrouter/free'
+        ];
 
         let successfulResponse = '';
         let usedModelId = selectedModelId;
-        let responsePing = null;
 
         for (let i = 0; i < modelQueue.length; i++) {
             const currentTargetModel = modelQueue[i];
@@ -461,14 +461,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastMessageContext = await generateCompressedMemory();
             }
 
-            const startTime = performance.now();
             const liveOutputText = await fetchLiveAIResponse(
                 currentTargetModel, 
                 promptText, 
                 lastMessageContext, 
                 currentAbortController.signal
             );
-            const endTime = performance.now();
 
             const normalizedText = (liveOutputText || '').trim().toLowerCase();
 
@@ -487,24 +485,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isInvalidOutput) {
                 successfulResponse = liveOutputText;
                 usedModelId = currentTargetModel;
-                responsePing = Math.round(endTime - startTime);
-                
-                PingEngine.latencyMap[usedModelId] = responsePing;
                 break;
             } else {
                 console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
             }
         }
 
-        
+        // 9. Update UI with final result and ACCUMULATE conversation history
         if (textTarget) {
             if (successfulResponse) {
                 textTarget.innerText = successfulResponse;
                 
-                
-                PingEngine.updateCardModelHeader(textTargetId, usedModelId, modelMetadataRegistry, responsePing);
-
-                // Cumulative Context Accumulation
+                // 🌟 CUMULATIVE CONTEXT ACCUMULATION (Keeps rolling chat context within same model)
                 if (!lastMessageContext) {
                     lastMessageContext = `User: ${promptText}\nAssistant: ${successfulResponse}`;
                 } else {
@@ -523,9 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
-    
-
-
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
