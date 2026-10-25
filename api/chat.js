@@ -67,22 +67,7 @@ ${fullChatHistory}
                 structuralSystemPrompt += `\n\n[CONCISE MEMORY CONTEXT LAYER]:\n${fallbackContext}\n\nContinue the dialogue based on these remembered facts and context.`;
             }
 
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vercel.com',
-                    'X-Title': 'Sournex Workspace'
-                },
-                body: JSON.stringify({
-                    model: activeTargetModel,
-                    messages: [
-                        { role: 'system', content: structuralSystemPrompt },
-                        { role: 'user', content: currentPrompt }
-                    ]
-                })
-            });
+            let lastErrorMessage = '';
 
             const data = await response.json();
 
@@ -92,6 +77,12 @@ ${fullChatHistory}
                 const errMsg = data.error ? data.error.message : 'Model response stream failed.';
                 return res.status(502).json({ error: errMsg });
             }
+
+            // Return clean error status if all attempts fail
+            return res.status(502).json({ 
+                error: `Gateway exception error node: ${lastErrorMessage || 'Selected target model failed to respond.'}` 
+            });
+
         } catch (err) {
             return res.status(500).json({ error: err.message });
         }
