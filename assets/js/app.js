@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH CUMULATIVE CONTEXT ---
+        // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH SINGLE COMPRESSION ---
     async function handleExecute() {
         if (isGenerating) {
             if (currentAbortController) currentAbortController.abort();
@@ -452,13 +452,20 @@ document.addEventListener('DOMContentLoaded', () => {
         let successfulResponse = '';
         let usedModelId = selectedModelId;
 
+        // 🌟 GENERATE COMPRESSED MEMORY ONCE BEFORE TRYING THE QUEUE
+        if (chatThread && chatThread.querySelectorAll('.bg-luxury-surface').length > 2) {
+            if (statusText) statusText.textContent = "Compressing context memory...";
+            lastMessageContext = await generateCompressedMemory();
+        }
+
         for (let i = 0; i < modelQueue.length; i++) {
             const currentTargetModel = modelQueue[i];
             
             if (i > 0 && textTarget) {
                 const modelName = modelMetadataRegistry[currentTargetModel]?.name || currentTargetModel;
                 textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${modelName})...</span>`;
-                lastMessageContext = await generateCompressedMemory();
+                // Note: We no longer call generateCompressedMemory() here repeatedly. 
+                // The single compressed 'lastMessageContext' is reused across all fallback tries!
             }
 
             const liveOutputText = await fetchLiveAIResponse(
@@ -491,12 +498,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 9. Update UI with final result and ACCUMULATE conversation history
+        // Update UI and accumulate context
         if (textTarget) {
             if (successfulResponse) {
                 textTarget.innerText = successfulResponse;
                 
-                // 🌟 CUMULATIVE CONTEXT ACCUMULATION (Keeps rolling chat context within same model)
                 if (!lastMessageContext) {
                     lastMessageContext = `User: ${promptText}\nAssistant: ${successfulResponse}`;
                 } else {
@@ -515,6 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
+    
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
