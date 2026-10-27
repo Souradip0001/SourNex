@@ -67,9 +67,23 @@ ${fullChatHistory}
                 structuralSystemPrompt += `\n\n[CONCISE MEMORY CONTEXT LAYER]:\n${fallbackContext}\n\nContinue the dialogue based on these remembered facts and context.`;
             }
 
-            let lastErrorMessage = '';
+            // FIXED: Added the missing OpenRouter chat completion fetch request here!
+            const apiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: activeTargetModel,
+                    messages: [
+                        { role: 'system', content: structuralSystemPrompt },
+                        { role: 'user', content: currentPrompt }
+                    ]
+                })
+            });
 
-            const data = await response.json();
+            const data = await apiResponse.json();
 
             if (data.choices && data.choices[0] && data.choices[0].message) {
                 return res.status(200).json({ text: data.choices[0].message.content });
@@ -78,15 +92,10 @@ ${fullChatHistory}
                 return res.status(502).json({ error: errMsg });
             }
 
-            // Return clean error status if all attempts fail
-            return res.status(502).json({ 
-                error: `Gateway exception error node: ${lastErrorMessage || 'Selected target model failed to respond.'}` 
-            });
-
         } catch (err) {
             return res.status(500).json({ error: err.message });
         }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-}
+        }
