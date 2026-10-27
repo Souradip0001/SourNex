@@ -345,17 +345,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function appendModelSkeleton(modelKey, userPrompt) {
+        function appendModelSkeleton(modelKey, userPrompt) {
         const conf = modelMetadataRegistry[modelKey] || { name: 'Unknown Target Node', short: 'AI' };
         const uniqueId = `seq-${Date.now()}`;
         const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
 
         const modelHtml = `
             <div class="flex items-start space-x-4 animate-fade-in mb-4">
-                <div class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
+                <div id="${uniqueId}-short" class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
                 <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
                     <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
-                        <p class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
+                        <p id="${uniqueId}-name" class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
                         <button onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
                             <span>Inspect Layer ${outputLayerCounter}</span>
                             <svg id="chev-${uniqueId}" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div id="meta-${uniqueId}" class="hidden mb-3 p-2.5 bg-luxury-dark/60 border border-luxury-border/60 rounded-lg text-[11px] font-mono text-zinc-400 space-y-1">
                         <div><span class="text-luxury-gold/70">Instruction:</span> "${userPrompt}"</div>
-                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span class="text-zinc-500">${modelKey}</span></div>
+                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span id="${uniqueId}-tag" class="text-zinc-500">${modelKey}</span></div>
                         <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
                     </div>
                     <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
@@ -376,8 +376,8 @@ document.addEventListener('DOMContentLoaded', () => {
             chatThread.scrollTop = chatThread.scrollHeight;
         }
         return uniqueId;
-    }
-
+        }
+    
     // --- PIPELINE EXECUTION ENGINE ---
     async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
         try {
