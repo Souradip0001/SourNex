@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 authTitle.textContent = 'Account Verification';
                 submitBtn.textContent = 'Verify Credentials';
-                toggleMsg.textContent = 'New node initialization?';
+                toggleMsg.textContent = 'New to SourNex?';
                 authToggleBtn.textContent = 'Create Account';
 
                 usernameContainer?.classList.add('hidden');
@@ -496,8 +496,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (accountStatusLabel) accountStatusLabel.textContent = statusLabel;
         if (accountStatusDot) {
             accountStatusDot.className = isLoggedIn
-                ? 'h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]'
-                : 'h-2 w-2 rounded-full bg-zinc-600';
+                ? 'h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] shrink-0'
+                : 'h-2 w-2 rounded-full bg-zinc-500 shrink-0';
         }
         if (username && headerUsername) {
             headerUsername.textContent = `@${username}`;
@@ -511,3 +511,5 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSessionUpdate(session);
     });
 });
+
+            
