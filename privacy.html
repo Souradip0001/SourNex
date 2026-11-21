@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | SourNex Engine</title>
+    <meta name="description" content="Privacy Policy and zero prompt-retention matrix protocol for SourNex Engine.">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/mainstyle.css">
+</head>
+<body class="bg-[#070709] text-zinc-300 min-h-screen flex flex-col">
+    <header class="border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <a href="/" class="text-xs tracking-[0.25em] font-bold text-white uppercase whitespace-nowrap">SourNexZ Workspace</a>
+        <a href="/" class="text-xs font-mono text-[#d4af37] hover:underline whitespace-nowrap">Back to Workspace</a>
+    </header>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto px-6 py-12 space-y-8">
+        <div class="space-y-2 border-b border-white/10 pb-6">
+            <p class="text-xs font-mono text-[#d4af37] uppercase tracking-widest">Zero Prompt-Retention Protocol</p>
+            <h1 class="text-2xl sm:text-3xl font-semibold text-white">Privacy Policy</h1>
+            <p class="text-xs font-mono text-zinc-500">Effective Date: November 21, 2026</p>
+        </div>
+
+        <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
+            <h2 class="text-base font-semibold text-white">1. Ephemeral Prompt Processing</h2>
+            <p>Prompts and context memory blocks are processed transiently through our serverless proxy strictly to fulfill your active model request. SourNex Engine does not persist your chat threads in a server database.</p>
+        </section>
+
+        <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
+            <h2 class="text-base font-semibold text-white">2. Local Browser Storage</h2>
+            <p>Guest session counters, cooldown timestamps, cached free-model metadata, and any optional provider API key you choose to supply are stored locally in your browser via <code class="font-mono text-zinc-200">localStorage</code> and <code class="font-mono text-zinc-200">sessionStorage</code>.</p>
+        </section>
+
+        <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
+            <h2 class="text-base font-semibold text-white">3. Account &amp; Authentication Data</h2>
+            <p>If you register an account, your email, optional operator username, and date of birth metadata are managed through Supabase Authentication solely for identity verification and password recovery.</p>
+        </section>
+
+        <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
+            <h2 class="text-base font-semibold text-white">4. Security &amp; Abuse Prevention</h2>
+            <p>Transient IP-based rate-limit counters and optional Cloudflare Turnstile verification tokens may be inspected in memory to prevent automated abuse and protect free-tier availability.</p>
+        </section>
+    </main>
+
+    <footer class="border-t border-white/10 px-6 py-4 text-center text-xs font-mono text-zinc-500">
+        <a href="/" class="hover:text-zinc-300">Workspace</a>
+        <span class="mx-2">&middot;</span>
+        <a href="/terms.html" class="hover:text-zinc-300">Terms of Service</a>
+    </footer>
+</body>
+</html>
