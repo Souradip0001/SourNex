@@ -1,10 +1,13 @@
+
+
 {
   "name": "luxury-multi-ai",
-  "version": "1.0.0",
-  "description": "Luxury Multi-AI Orchestration Platform",
+  "version": "1.1.0",
+  "description": "SourNexZ Engine - Multi-Layer AI Orchestration Platform",
+  "type": "module",
   "main": "index.html",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/ && cp -r assets dist/ 2>/dev/null || true",
+    "build": "mkdir -p dist && cp index.html terms.html privacy.html robots.txt sitemap.xml favicon.svg site.webmanifest dist/ && cp -r assets dist/",
     "start": "echo 'No start script needed for static hosting'"
   }
 }
