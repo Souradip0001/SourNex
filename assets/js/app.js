@@ -27,12 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const globalAccountBtn = document.getElementById('global-account-btn');
 
     // --- STATE ENGINE PARAMETERS ---
-    let selectedModelId = ''; 
-    let lastMessageContext = '';   
+    let selectedModelId = '';
+    let lastMessageContext = '';
     let outputLayerCounter = 1;
+    let activeOnlineCount = 0;
     let modelMetadataRegistry = {};
-    
-    let currentAbortController = null; 
+
+    let currentAbortController = null;
     let isGenerating = false;
     let isDockExpanded = false;
 
@@ -86,10 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
         dockExpandTrigger.addEventListener('click', () => {
             isDockExpanded = !isDockExpanded;
             if (isDockExpanded) {
-                dockCollapsibleWrapper.style.maxHeight = "300px"; 
+                dockCollapsibleWrapper.style.maxHeight = "300px";
                 dockChevron.style.transform = "rotate(180deg)";
             } else {
-                dockCollapsibleWrapper.style.maxHeight = "0px"; 
+                dockCollapsibleWrapper.style.maxHeight = "0px";
                 dockChevron.style.transform = "rotate(0deg)";
             }
         });
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             authOverlay.classList.add('pointer-events-auto', 'flex');
         }
     };
-    
+
     const dismissAuthModal = () => {
         if (authOverlay) {
             authOverlay.classList.remove('pointer-events-auto', 'flex');
@@ -133,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
             currentCount = 0;
-            
+
             if (masterInput) {
                 masterInput.disabled = false;
                 masterInput.placeholder = "Guest Access Active (10 free layers remaining)...";
@@ -142,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
-        
+
         if (masterInput && !cooldownExpiry) {
             masterInput.placeholder = `Guest Access Active (${allocatedPromptsRemaining} free layers remaining)...`;
         }
@@ -150,12 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
             const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
-            
+
             if (masterInput) {
                 masterInput.disabled = true;
                 masterInput.placeholder = `Guest quota exhausted. Sign up or wait ${minutesLeftTotal}m to unlock.`;
             }
-            
+
             if (sendBtn) {
                 sendBtn.disabled = true;
                 sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed";
@@ -168,11 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- METADATA DIRECTORY ENGINE ---
-        async function initializeModelMatrix() {
+    async function initializeModelMatrix() {
         try {
             const res = await fetch('/api/chat', { method: 'GET' });
             const data = await res.json();
-            
+
             if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
                 throw new Error(data.error || "Index data empty or invalid backend format");
             }
@@ -181,10 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) === 0);
                 const modelIdLower = model.id.toLowerCase();
                 const nameLower = (model.name || '').toLowerCase();
-                
+
                 const isUtility = modelIdLower.includes('safety') || nameLower.includes('safety') ||
                                   modelIdLower.includes('moderation') || nameLower.includes('moderation') ||
-                                  modelIdLower.includes('embed') || nameLower.includes('similarity');
+                                  modelIdLower.includes('embed') || nameLower.includes('embed') ||
+                                  modelIdLower.includes('similarity') || nameLower.includes('similarity');
 
                 return isFree && !isUtility;
             });
@@ -194,18 +196,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (dynamicModelDock) dynamicModelDock.innerHTML = ''; 
+            if (dynamicModelDock) dynamicModelDock.innerHTML = '';
             let functionalModelSelected = false;
-            let activeOnlineCount = 0;
+            activeOnlineCount = 0;
 
             freeChatModels.forEach((model) => {
                 const isDeprecated = model.deprecation != null;
                 const isUnstable = model.description && (
-                    model.description.toLowerCase().includes('degraded') || 
+                    model.description.toLowerCase().includes('degraded') ||
                     model.description.toLowerCase().includes('unstable') ||
                     model.description.toLowerCase().includes('maintenance')
                 );
-                
+
                 const isWorkingFine = !isDeprecated && !isUnstable;
 
                 modelMetadataRegistry[model.id] = {
@@ -227,22 +229,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 btn.setAttribute('data-model-id', model.id);
-                
+
                 if (isWorkingFine) {
-                    // 🌟 MODEL SWITCH EVENT: Compresses history ONLY when switching to a different model
+                    // MODEL SWITCH EVENT: Compresses history ONLY when switching to a different model
                     btn.addEventListener('click', async () => {
-                        if (isGenerating) return; 
-                        
+                        if (isGenerating) return;
+
                         // Prevent re-triggering if clicking the already active model
                         if (selectedModelId === model.id) return;
-                        
+
                         document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
                             b.classList.remove('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
                             b.classList.add('border-zinc-800', 'text-zinc-400');
                         });
                         btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
                         btn.classList.remove('border-zinc-800', 'text-zinc-400');
-                        
+
                         // Compress memory only if switching to a new model and chat history exists
                         if (chatThread && chatThread.querySelectorAll('.bg-luxury-surface').length > 0) {
                             if (statusText) statusText.textContent = "Compressing context for new model...";
@@ -281,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 setButtonStateActive();
             }
-            
+
             if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
             if (statusText) statusText.textContent = `${activeOnlineCount} Layers Online`;
 
@@ -289,20 +291,21 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Matrix compilation failed, falling back to router wrapper:", err);
             setupFallbackModel();
         }
-        }
-    
-//-----This handles when a model fails to response----- 
+    }
+
+    // --- FALLBACK WHEN MODEL MATRIX FAILS ---
     function setupFallbackModel() {
+        activeOnlineCount = 0;
         selectedModelId = 'openrouter/free';
         modelMetadataRegistry['openrouter/free'] = { name: 'SourNexZ Router', short: 'SNX' };
-        
+
         if (dynamicModelDock) {
             dynamicModelDock.innerHTML = `
                 <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
                     SourNexZ Router
                 </button>`;
         }
-            
+
         if (dockCounterBadge) dockCounterBadge.textContent = "1";
 
         if (checkGuestAccess()) {
@@ -355,38 +358,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function appendModelSkeleton(modelKey, userPrompt) {
-    const conf = modelMetadataRegistry[modelKey] || { name: 'Unknown Target Node', short: 'AI' };
-    const uniqueId = `seq-${Date.now()}`;
-    const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
+        const conf = modelMetadataRegistry[modelKey] || { name: 'Unknown Target Node', short: 'AI' };
+        const uniqueId = `seq-${Date.now()}`;
+        const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
 
-    const modelHtml = `
-        <div class="flex items-start space-x-4 animate-fade-in mb-4">
-            <div id="${uniqueId}-short" class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
-            <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
-                <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
-                    <p id="${uniqueId}-name" class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
-                    <button onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
-                        <span>Inspect Layer ${outputLayerCounter}</span>
-                        <svg id="chev-${uniqueId}" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
+        const modelHtml = `
+            <div class="flex items-start space-x-4 animate-fade-in mb-4">
+                <div id="${uniqueId}-short" class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
+                <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
+                    <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
+                        <p id="${uniqueId}-name" class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
+                        <button onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
+                            <span>Inspect Layer ${outputLayerCounter}</span>
+                            <svg id="chev-${uniqueId}" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <div id="meta-${uniqueId}" class="hidden mb-3 p-2.5 bg-luxury-dark/60 border border-luxury-border/60 rounded-lg text-[11px] font-mono text-zinc-400 space-y-1">
+                        <div><span class="text-luxury-gold/70">Instruction:</span> "${userPrompt}"</div>
+                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span id="${uniqueId}-tag" class="text-zinc-500">${modelKey}</span></div>
+                        <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
+                    </div>
+                    <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
+                        <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
+                    </p>
                 </div>
-                <div id="meta-${uniqueId}" class="hidden mb-3 p-2.5 bg-luxury-dark/60 border border-luxury-border/60 rounded-lg text-[11px] font-mono text-zinc-400 space-y-1">
-                    <div><span class="text-luxury-gold/70">Instruction:</span> "${userPrompt}"</div>
-                    <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span id="${uniqueId}-tag" class="text-zinc-500">${modelKey}</span></div>
-                    <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
-                </div>
-                <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
-                    <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
-                </p>
-            </div>
-        </div>`;
-    if (chatThread) {
-        chatThread.insertAdjacentHTML('beforeend', modelHtml);
-        chatThread.scrollTop = chatThread.scrollHeight;
+            </div>`;
+        if (chatThread) {
+            chatThread.insertAdjacentHTML('beforeend', modelHtml);
+            chatThread.scrollTop = chatThread.scrollHeight;
+        }
+        return uniqueId;
     }
-    return uniqueId;
-    }
-    
 
     // --- PIPELINE EXECUTION ENGINE ---
     async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
@@ -395,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
-                signal: abortSignal 
+                signal: abortSignal
             });
 
             const data = await response.json();
@@ -414,136 +416,145 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH CUMULATIVE CONTEXT ---
+    // --- AUTO-SWITCHING PIPELINE EXECUTION ENGINE WITH SINGLE COMPRESSION ---
     async function handleExecute() {
-    if (isGenerating) {
-        if (currentAbortController) currentAbortController.abort();
-        setButtonStateActive();
-        return;
-    }
-
-    if (!checkGuestAccess()) return;
-
-    const promptText = masterInput ? masterInput.value.trim() : '';
-    if (!promptText || !selectedModelId) return;
-
-    if (!window.isUserLoggedIn) {
-        let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
-        currentCount++;
-        localStorage.setItem('snx_guest_chat_count', currentCount.toString());
-
-        if (currentCount >= 10) {
-            const twoHoursInMs = 2 * 60 * 60 * 1000; 
-            const expiryTime = Date.now() + twoHoursInMs;
-            localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
+        if (isGenerating) {
+            if (currentAbortController) currentAbortController.abort();
+            setButtonStateActive();
+            return;
         }
-    }
 
-    appendUserMessage(promptText);
-    if (masterInput) masterInput.value = ''; 
+            if (!checkGuestAccess()) return;
 
-    const textTargetId = appendModelSkeleton(selectedModelId, promptText);
-    const textTarget = document.getElementById(`${textTargetId}-text`);
+        const promptText = masterInput ? masterInput.value.trim() : '';
+        if (!promptText || !selectedModelId) return;
 
-    currentAbortController = new AbortController();
-    setButtonStateLoading();
+        if (!window.isUserLoggedIn) {
+            let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
+            currentCount++;
+            localStorage.setItem('snx_guest_chat_count', currentCount.toString());
 
-    const activeDockButtons = Array.from(document.querySelectorAll('#dynamic-model-dock button:not([disabled])'));
-    const candidateModelIds = activeDockButtons
-        .map(btn => btn.getAttribute('data-model-id'))
-        .filter(Boolean);
-
-    const modelQueue = [
-        selectedModelId,
-        ...candidateModelIds.filter(id => id !== selectedModelId),
-        'openrouter/free'
-    ];
-
-    let successfulResponse = '';
-    let usedModelId = selectedModelId;
-
-    for (let i = 0; i < modelQueue.length; i++) {
-        const currentTargetModel = modelQueue[i];
-        const conf = modelMetadataRegistry[currentTargetModel] || { 
-            name: currentTargetModel.split('/')[1] || currentTargetModel, 
-            short: 'AI' 
-        };
-        
-        const nameEl = document.getElementById(`${textTargetId}-name`);
-        const shortEl = document.getElementById(`${textTargetId}-short`);
-        const tagEl = document.getElementById(`${textTargetId}-tag`);
-        
-        if (nameEl) nameEl.textContent = conf.name;
-        if (shortEl) shortEl.textContent = conf.short || 'AI';
-        if (tagEl) tagEl.textContent = currentTargetModel;
-
-        // Auto-switch trigger: Compresses memory ONLY when falling back to a backup model (i > 0)
-        if (i > 0) {
-            if (textTarget) {
-                textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${conf.name}) & compressing context...</span>`;
-            }
-            if (chatThread && chatThread.querySelectorAll('.bg-luxury-surface').length > 0) {
-                lastMessageContext = await generateCompressedMemory();
+            if (currentCount >= 10) {
+                const twoHoursInMs = 2 * 60 * 60 * 1000;
+                const expiryTime = Date.now() + twoHoursInMs;
+                localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
             }
         }
 
-        const liveOutputText = await fetchLiveAIResponse(
-            currentTargetModel, 
-            promptText, 
-            lastMessageContext, 
-            currentAbortController.signal
-        );
+        appendUserMessage(promptText);
+        if (masterInput) masterInput.value = '';
 
-        const normalizedText = (liveOutputText || '').trim().toLowerCase();
+        const textTargetId = appendModelSkeleton(selectedModelId, promptText);
+        const textTarget = document.getElementById(`${textTargetId}-text`);
 
-        const isInvalidOutput = 
-            !liveOutputText ||
-            liveOutputText.startsWith("[Execution Error]") ||
-            liveOutputText.startsWith("[Connection Error]") ||
-            normalizedText.includes("gateway exception") ||
-            normalizedText.includes("insufficient credits") ||
-            normalizedText.includes("resourceexhausted") ||
-            normalizedText.includes("provider returned error");
+        currentAbortController = new AbortController();
+        setButtonStateLoading();
 
-        if (!isInvalidOutput) {
-            successfulResponse = liveOutputText;
-            usedModelId = currentTargetModel;
-            break;
-        } else {
-            console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed. Trying next node...`);
+        const activeDockButtons = Array.from(document.querySelectorAll('#dynamic-model-dock button:not([disabled])'));
+        const candidateModelIds = activeDockButtons
+            .map(btn => btn.getAttribute('data-model-id'))
+            .filter(Boolean);
+
+        const modelQueue = [
+            selectedModelId,
+            ...candidateModelIds.filter(id => id !== selectedModelId),
+            'openrouter/free'
+        ];
+
+        let successfulResponse = '';
+        let usedModelId = selectedModelId;
+
+        // Generate compressed memory once before trying the fallback queue
+        if (chatThread && chatThread.querySelectorAll('.bg-luxury-surface').length > 2) {
+            if (statusText) statusText.textContent = "Compressing context memory...";
+            lastMessageContext = await generateCompressedMemory();
+            if (statusText) {
+                statusText.textContent = activeOnlineCount > 0
+                    ? `${activeOnlineCount} Layers Online`
+                    : "SourNexZ Router Active";
+            }
         }
-    }
 
-    if (textTarget) {
-        if (successfulResponse) {
-            textTarget.innerText = successfulResponse;
-            
-            if (!lastMessageContext) {
-                lastMessageContext = `User: ${promptText}\nAssistant: ${successfulResponse}`;
+        for (let i = 0; i < modelQueue.length; i++) {
+            const currentTargetModel = modelQueue[i];
+            const conf = modelMetadataRegistry[currentTargetModel] || {
+                name: currentTargetModel.split('/')[1] || currentTargetModel,
+                short: 'AI'
+            };
+
+            const nameEl = document.getElementById(`${textTargetId}-name`);
+            const shortEl = document.getElementById(`${textTargetId}-short`);
+            const tagEl = document.getElementById(`${textTargetId}-tag`);
+
+            if (nameEl) nameEl.textContent = conf.name;
+            if (shortEl) shortEl.textContent = conf.short || 'AI';
+            if (tagEl) tagEl.textContent = currentTargetModel;
+
+            if (i > 0 && textTarget) {
+                textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${conf.name})...</span>`;
+                // Reuse the single compressed 'lastMessageContext' across all fallback tries
+            }
+
+            const liveOutputText = await fetchLiveAIResponse(
+                currentTargetModel,
+                promptText,
+                lastMessageContext,
+                currentAbortController.signal
+            );
+
+            const normalizedText = (liveOutputText || '').trim().toLowerCase();
+
+            const isInvalidOutput =
+                !liveOutputText ||
+                liveOutputText.startsWith("[Execution Error]") ||
+                liveOutputText.startsWith("[Connection Error]") ||
+                normalizedText.startsWith("user safety:") ||
+                normalizedText.includes("gateway exception") ||
+                normalizedText.includes("insufficient credits") ||
+                normalizedText.includes("resourceexhausted") ||
+                normalizedText.includes("provider returned error") ||
+                normalizedText.includes("generation terminated by operator") ||
+                normalizedText.includes("secure link failed");
+
+            if (!isInvalidOutput) {
+                successfulResponse = liveOutputText;
+                usedModelId = currentTargetModel;
+                break;
             } else {
-                lastMessageContext += `\nUser: ${promptText}\nAssistant: ${successfulResponse}`;
+                if (currentAbortController.signal.aborted) break;
+                console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
             }
-        } else {
-            textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
         }
+
+        // Update UI and accumulate context
+        if (textTarget) {
+            if (currentAbortController.signal.aborted) {
+                textTarget.innerText = "Generation terminated by operator. Core context detached.";
+            } else if (successfulResponse) {
+                textTarget.innerText = successfulResponse;
+
+                if (!lastMessageContext) {
+                    lastMessageContext = `User: ${promptText}\nAssistant: ${successfulResponse}`;
+                } else {
+                    lastMessageContext += `\nUser: ${promptText}\nAssistant: ${successfulResponse}`;
+                }
+            } else {
+                textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
+            }
+        }
+
+        outputLayerCounter++;
+
+        if (checkGuestAccess()) {
+            setButtonStateActive();
+        }
+
+        if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
     }
-
-    outputLayerCounter++;
-    
-    if (checkGuestAccess()) {
-        setButtonStateActive();
-    }
-    
-    if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
-    }
-    
-
-
-
 
     // --- GLOBAL EVENT REGISTRATION ---
     if (sendBtn) sendBtn.addEventListener('click', handleExecute);
-    
+
     if (masterInput) {
         masterInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
