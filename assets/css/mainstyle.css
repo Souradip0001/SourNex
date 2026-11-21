@@ -23,10 +23,20 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     font-family: var(--font-sans);
     background-color: var(--bg-dark);
     color: var(--text-primary);
+    height: 100vh;
+    height: 100dvh;
     background-image:
         radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.04) 0%, transparent 70%),
         radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.015) 0%, transparent 50%);
@@ -74,19 +84,25 @@ header, footer {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 0.875rem;
 }
 
 .auth-card {
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
-    padding: 1.5rem;
+    padding: 1.25rem;
     border-radius: 1rem;
     max-width: 28rem;
     width: 100%;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), var(--shadow-gold);
-    max-height: 90vh;
+    max-height: 90dvh;
     overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+    .auth-card {
+        padding: 1.5rem;
+    }
 }
 
 /* --- Form Inputs --- */
@@ -99,9 +115,18 @@ header, footer {
     border: 1px solid var(--border-color);
     border-radius: 0.75rem;
     color: var(--text-primary);
-    font-size: 0.75rem;
-    padding: 0.625rem 1rem;
+    font-size: 1rem;
+    padding: 0.65rem 0.95rem;
     transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 640px) {
+    .auth-card input[type="text"],
+    .auth-card input[type="email"],
+    .auth-card input[type="password"],
+    .auth-card input[type="date"] {
+        font-size: 0.875rem;
+    }
 }
 
 .auth-card input[type="date"]::-webkit-calendar-picker-indicator {
@@ -146,7 +171,12 @@ header, footer {
     color: #ffffff;
 }
 
-/* --- Chat Thread Text Selection --- */
+/* --- Chat Thread Scroll & Selection --- */
+#chat-thread {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
 #chat-thread, #chat-thread * {
     user-select: text;
     -webkit-user-select: text;
@@ -154,14 +184,22 @@ header, footer {
 
 /* --- Safe Markdown & Code Blocks --- */
 .snx-markdown {
-    font-size: 0.875rem;
+    font-size: 1rem;
     line-height: 1.65;
-    color: #d4d4d8;
+    color: #e4e4e7;
+    overflow-wrap: anywhere;
     word-break: break-word;
+    min-width: 0;
+}
+
+@media (min-width: 640px) {
+    .snx-markdown {
+        font-size: 0.9375rem;
+    }
 }
 
 .snx-markdown > * + * {
-    margin-top: 0.65rem;
+    margin-top: 0.7rem;
 }
 
 .snx-markdown h1,
@@ -173,14 +211,13 @@ header, footer {
     margin-top: 0.9rem;
 }
 
-.snx-markdown h1 { font-size: 1.125rem; }
-.snx-markdown h2 { font-size: 1rem; }
-.snx-markdown h3 { font-size: 0.925rem; color: #f4e3a3; }
+.snx-markdown h1 { font-size: 1.2rem; }
+.snx-markdown h2 { font-size: 1.075rem; }
+.snx-markdown h3 { font-size: 1rem; color: #f4e3a3; }
 
 .snx-markdown ul,
 .snx-markdown ol {
     padding-left: 1.25rem;
-    space-y: 0.25rem;
 }
 
 .snx-markdown ul { list-style-type: disc; }
@@ -219,17 +256,19 @@ header, footer {
     border-radius: 0.75rem;
     overflow: hidden;
     margin-top: 0.75rem;
+    width: 100%;
+    max-width: 100%;
 }
 
 .snx-code-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.4rem 0.75rem;
+    padding: 0.45rem 0.75rem;
     background: rgba(255, 255, 255, 0.03);
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     font-family: var(--font-mono);
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #8e8e93;
@@ -237,11 +276,11 @@ header, footer {
 
 .snx-copy-btn {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     color: #d4d4d8;
     border-radius: 0.4rem;
-    padding: 0.15rem 0.5rem;
-    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.7rem;
     cursor: pointer;
     transition: border-color 0.15s ease, color 0.15s ease;
 }
@@ -254,9 +293,10 @@ header, footer {
 .snx-code-block pre {
     margin: 0;
     padding: 0.85rem;
+    max-width: 100%;
     overflow-x: auto;
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     line-height: 1.55;
     color: #e4e4e7;
 }
@@ -264,14 +304,15 @@ header, footer {
 /* --- Toast Stack --- */
 #snx-toast-container {
     position: fixed;
-    top: 4.5rem;
+    top: 4rem;
+    left: 1rem;
     right: 1rem;
     z-index: 60;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-width: 22rem;
-    width: calc(100% - 2rem);
+    max-width: 24rem;
+    margin-left: auto;
     pointer-events: none;
 }
 
@@ -280,10 +321,10 @@ header, footer {
     background: #121216;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.75rem;
-    padding: 0.75rem 0.9rem;
+    padding: 0.8rem 0.95rem;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
     color: #e4e4e7;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     line-height: 1.45;
     display: flex;
     flex-direction: column;
