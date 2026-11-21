@@ -442,8 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </svg>
             <span>Stop</span>`;
     }
-
-        // XSS-safe user message append
+    // XSS-safe user message append
     function appendUserMessage(text) {
         const userHtml = `
             <div class="flex items-start justify-end gap-2.5 sm:gap-3.5 animate-fade-in w-full min-w-0">
@@ -457,6 +456,39 @@ document.addEventListener('DOMContentLoaded', () => {
             chatThread.insertAdjacentHTML('beforeend', userHtml);
             chatThread.scrollTop = chatThread.scrollHeight;
         }
+    }
+
+    function buildThinkingLoaderHtml(uniqueId, headlineText, activeStepIndex = 0) {
+        const steps = [
+            'Analyzing your prompt',
+            'Connecting conversation context',
+            'Synthesizing response'
+        ];
+        const stepsHtml = steps.map((label, idx) => {
+            const stateClass = idx < activeStepIndex
+                ? 'is-done'
+                : (idx === activeStepIndex ? 'is-active' : '');
+            const marker = idx < activeStepIndex
+                ? '&#10003;'
+                : (idx === activeStepIndex ? '&#9679;' : '&#9675;');
+            return `<div class="snx-thinking-step ${stateClass}" data-step-index="${idx}"><span class="font-mono text-xs">${marker}</span><span>${escapeHtml(label)}</span></div>`;
+        }).join('');
+
+        return `
+            <div class="snx-thinking-box" id="${uniqueId}-loader">
+                <div class="snx-thinking-header">
+                    <span class="snx-thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                    <span id="${uniqueId}-loader-label">${escapeHtml(headlineText || 'Thinking...')}</span>
+                </div>
+                <div class="snx-thinking-steps" id="${uniqueId}-loader-steps">
+                    ${stepsHtml}
+                </div>
+                <div class="snx-shimmer-stack" aria-hidden="true">
+                    <div class="snx-shimmer-line w-[92%]"></div>
+                    <div class="snx-shimmer-line w-[76%]"></div>
+                    <div class="snx-shimmer-line w-[54%]"></div>
+                </div>
+            </div>`;
     }
 
     // XSS-safe model response skeleton
@@ -483,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div><span class="text-luxury-gold/70">Inherited Context:</span> "<span id="${uniqueId}-ctx">${escapeHtml(contextPreview)}</span>"</div>
                     </div>
                     <div class="text-base sm:text-[15px] text-zinc-200 leading-relaxed min-w-0 break-words" id="${uniqueId}-text">
-                        <span class="italic text-zinc-400 animate-pulse">Routing instruction sequence via secure server...</span>
+                        ${buildThinkingLoaderHtml(uniqueId, `Thinking with ${conf.name}...`, 0)}
                     </div>
                 </div>
             </div>`;
@@ -591,80 +623,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let successfulResponse = '';
         let usedModelId = selectedModelId;
+        let currentThinkingStep = 0;
 
-        if (activeCompressionPromise) {
-            await activeCompressionPromise;
-            const ctxEl = document.getElementById(`${textTargetId}-ctx`);
-            if (ctxEl) {
-                ctxEl.textContent = lastMessageContext ? `${lastMessageContext.substring(0, 60)}...` : 'None (Initial Entry)';
-            }
-        }
+        const thinkingStepTimer = setInterval(() => {
+            if (currentThinkingStep >= 2) return;
+            currentThinkingStep += 1;
+            const stepsContainer = document.getElementById(`${textTargetId}-loader-steps`);
+            if (!stepsContainer) return;
+            stepsContainer.querySelectorAll('.snx-thinking-step').forEach((stepEl) => {
+                const idx = parseInt(stepEl.getAttribute('data-step-index') || '0', 10);
+                const markerEl = stepEl.querySelector('span');
+                stepEl.classList.remove('is-active', 'is-done');
+                if (idx < currentThinkingStep) {
+                    stepEl.classList.add('is-done');
+                    if (markerEl) markerEl.innerHTML = '&#10003;';
+                } else if (idx === currentThinkingStep) {
+                    stepEl.classList.add('is-active');
+                    if (markerEl) markerEl.innerHTML = '&#9679;';
+                } else if (markerEl) {
+                    markerEl.innerHTML = '&#9675;';
+                }
+            });
+        }, 1200);
 
-        for (let i = 0; i < modelQueue.length; i++) {
-            const currentTargetModel = modelQueue[i];
-            const conf = modelMetadataRegistry[currentTargetModel] || {
-                name: currentTargetModel.split('/')[1] || currentTargetModel,
-                short: 'AI'
-            };
-
-            const nameEl = document.getElementById(`${textTargetId}-name`);
-            const shortEl = document.getElementById(`${textTargetId}-short`);
-            const tagEl = document.getElementById(`${textTargetId}-tag`);
-
-            if (nameEl) nameEl.textContent = conf.name;
-            if (shortEl) shortEl.textContent = conf.short || 'AI';
-            if (tagEl) tagEl.textContent = currentTargetModel;
-
-            const needsModelSwitchCompression =
-                hasChatHistory &&
-                !isContextCompressed &&
-                lastRespondedModelId &&
-                currentTargetModel !== lastRespondedModelId;
-
-            if (i > 0 && textTarget) {
-                textTarget.innerHTML = needsModelSwitchCompression
-                    ? `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${escapeHtml(conf.name)}) &amp; compressing context...</span>`
-                    : `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${escapeHtml(conf.name)})...</span>`;
-            }
-
-            if (needsModelSwitchCompression) {
-                await ensureCompressedContext(`Compressing context for ${conf.name}...`);
+        try {
+            if (activeCompressionPromise) {
+                await activeCompressionPromise;
                 const ctxEl = document.getElementById(`${textTargetId}-ctx`);
                 if (ctxEl) {
                     ctxEl.textContent = lastMessageContext ? `${lastMessageContext.substring(0, 60)}...` : 'None (Initial Entry)';
                 }
-                if (currentAbortController.signal.aborted) break;
             }
 
-            const liveOutputText = await fetchLiveAIResponse(
-                currentTargetModel,
-                promptText,
-                lastMessageContext,
-                currentAbortController.signal
-            );
+            for (let i = 0; i < modelQueue.length; i++) {
+                const currentTargetModel = modelQueue[i];
+                const conf = modelMetadataRegistry[currentTargetModel] || {
+                    name: currentTargetModel.split('/')[1] || currentTargetModel,
+                    short: 'AI'
+                };
 
-            const normalizedText = (liveOutputText || '').trim().toLowerCase();
+                const nameEl = document.getElementById(`${textTargetId}-name`);
+                const shortEl = document.getElementById(`${textTargetId}-short`);
+                const tagEl = document.getElementById(`${textTargetId}-tag`);
 
-            const isInvalidOutput =
-                !liveOutputText ||
-                liveOutputText.startsWith('[Execution Error]') ||
-                liveOutputText.startsWith('[Connection Error]') ||
-                normalizedText.startsWith('user safety:') ||
-                normalizedText.includes('gateway exception') ||
-                normalizedText.includes('insufficient credits') ||
-                normalizedText.includes('resourceexhausted') ||
-                normalizedText.includes('provider returned error') ||
-                normalizedText.includes('generation terminated by operator') ||
-                normalizedText.includes('secure link failed');
+                if (nameEl) nameEl.textContent = conf.name;
+                if (shortEl) shortEl.textContent = conf.short || 'AI';
+                if (tagEl) tagEl.textContent = currentTargetModel;
 
-            if (!isInvalidOutput) {
-                successfulResponse = liveOutputText;
-                usedModelId = currentTargetModel;
-                break;
-            } else {
-                if (currentAbortController.signal.aborted) break;
-                console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
+                const needsModelSwitchCompression =
+                    hasChatHistory &&
+                    !isContextCompressed &&
+                    lastRespondedModelId &&
+                    currentTargetModel !== lastRespondedModelId;
+
+                if (i > 0) {
+                    const loaderLabelEl = document.getElementById(`${textTargetId}-loader-label`);
+                    const statusMsg = needsModelSwitchCompression
+                        ? `Switching to ${conf.name} & compressing context...`
+                        : `Thinking with backup model (${conf.name})...`;
+                    if (loaderLabelEl) {
+                        loaderLabelEl.textContent = statusMsg;
+                    } else if (textTarget) {
+                        textTarget.innerHTML = buildThinkingLoaderHtml(textTargetId, statusMsg, currentThinkingStep);
+                    }
+                }
+
+                if (needsModelSwitchCompression) {
+                    await ensureCompressedContext(`Compressing context for ${conf.name}...`);
+                    const ctxEl = document.getElementById(`${textTargetId}-ctx`);
+                    if (ctxEl) {
+                        ctxEl.textContent = lastMessageContext ? `${lastMessageContext.substring(0, 60)}...` : 'None (Initial Entry)';
+                    }
+                    if (currentAbortController.signal.aborted) break;
+                }
+
+                const liveOutputText = await fetchLiveAIResponse(
+                    currentTargetModel,
+                    promptText,
+                    lastMessageContext,
+                    currentAbortController.signal
+                );
+
+                const normalizedText = (liveOutputText || '').trim().toLowerCase();
+
+                const isInvalidOutput =
+                    !liveOutputText ||
+                    liveOutputText.startsWith('[Execution Error]') ||
+                    liveOutputText.startsWith('[Connection Error]') ||
+                    normalizedText.startsWith('user safety:') ||
+                    normalizedText.includes('gateway exception') ||
+                    normalizedText.includes('insufficient credits') ||
+                    normalizedText.includes('resourceexhausted') ||
+                    normalizedText.includes('provider returned error') ||
+                    normalizedText.includes('generation terminated by operator') ||
+                    normalizedText.includes('secure link failed');
+
+                if (!isInvalidOutput) {
+                    successfulResponse = liveOutputText;
+                    usedModelId = currentTargetModel;
+                    break;
+                } else {
+                    if (currentAbortController.signal.aborted) break;
+                    console.warn(`[Auto-Switching Engine]: Model "${currentTargetModel}" failed/rejected response. Trying next node...`);
+                }
             }
+        } finally {
+            clearInterval(thinkingStepTimer);
         }
 
         // Update UI safely and accumulate context
