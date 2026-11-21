@@ -3,6 +3,13 @@
  * Infrastructure: Client-Side Multi-AI Layer Mapping
  */
 document.addEventListener('DOMContentLoaded', () => {
+    // --- CONSTANTS ---
+    const GUEST_LIMIT = 20;
+    const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
+    const MODEL_REQUEST_TIMEOUT_MS = 12000; // 12s per model attempt
+    const MODEL_CACHE_KEY = 'snx_free_models_cache_v1';
+    const MODEL_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
     // --- DOM ELEMENT SELECTIONS ---
     const chatThread = document.getElementById('chat-thread');
     const masterInput = document.getElementById('master-input');
@@ -10,12 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dynamicModelDock = document.getElementById('dynamic-model-dock');
     const statusGlow = document.getElementById('engine-status-glow');
     const statusText = document.getElementById('engine-status-text');
-    const emptyState = document.getElementById('empty-state');
-
-    // --- SOURNEX AUTHENTICATION UI OVERLAY ELEMENTS ---
-    const authOverlay = document.getElementById('auth-overlay');
-    const authCloseBtn = document.getElementById('auth-close-btn');
-    const authGuestBypass = document.getElementById('auth-guest-bypass');
+    const clearThreadBtn = document.getElementById('clear-thread-btn');
 
     // --- ACCORDION COMPONENT UI ELEMENTS ---
     const dockExpandTrigger = document.getElementById('dock-expand-trigger');
@@ -23,31 +25,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const dockChevron = document.getElementById('dock-chevron');
     const dockCounterBadge = document.getElementById('dock-counter-badge');
 
-    // --- GLOBAL TOPBAR ACCOUNT ACTIONS ---
-    const globalAccountBtn = document.getElementById('global-account-btn');
-
     // --- STATE ENGINE PARAMETERS ---
     let selectedModelId = '';
     let lastMessageContext = '';
     let outputLayerCounter = 1;
     let activeOnlineCount = 0;
+    let uniqueSeqCounter = 0;
     let modelMetadataRegistry = {};
 
     let currentAbortController = null;
+    let cooldownResetTimer = null;
     let isGenerating = false;
     let isDockExpanded = false;
 
-    // --- FORCE ALLOW TEXT SELECTION ---
-    const selectionStyle = document.createElement('style');
-    selectionStyle.innerHTML = `
-        #chat-thread, #chat-thread * {
-            user-select: text !important;
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
+    const escapeHtml = (str) => {
+        if (typeof window.escapeHtml === 'function') return window.escapeHtml(str);
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    function getRequestHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        const userKey = (localStorage.getItem('snx_user_provider_key') || '').trim();
+        if (userKey.startsWith('sk-') && userKey.length >= 20) {
+            headers['X-Provider-Key'] = userKey;
         }
-    `;
-    document.head.appendChild(selectionStyle);
+        return headers;
+    }
 
     // --- HELPER: CONTEXT MEMORY COMPRESSION ---
     async function generateCompressedMemory() {
@@ -60,125 +68,202 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!textNodes || textNodes.length < 50) return lastMessageContext;
 
         try {
-            if (statusText) statusText.textContent = "Compressing context memory...";
+            if (statusText) statusText.textContent = 'Compressing context memory...';
 
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getRequestHeaders(),
                 body: JSON.stringify({
                     action: 'SUMMARIZE_MEMORY',
                     fullChatHistory: textNodes
-                })
+                }),
+                signal: AbortSignal.timeout ? AbortSignal.timeout(MODEL_REQUEST_TIMEOUT_MS) : undefined
             });
 
             const data = await response.json();
             if (data && data.memoryJson) {
-                console.log("New Condensed Memory Block Created:", data.memoryJson);
                 return data.memoryJson;
             }
         } catch (err) {
-            console.warn("Memory compression failed, falling back to last context string:", err);
+            console.warn('Memory compression failed, falling back to last context string:', err);
         }
         return lastMessageContext;
     }
 
-    // --- SOURNEX ACCORDION CONTROL SLIDER ---
-    if (dockExpandTrigger) {
+    // --- ACCORDION CONTROL ---
+    if (dockExpandTrigger && dockCollapsibleWrapper) {
         dockExpandTrigger.addEventListener('click', () => {
             isDockExpanded = !isDockExpanded;
-            if (isDockExpanded) {
-                dockCollapsibleWrapper.style.maxHeight = "300px";
-                dockChevron.style.transform = "rotate(180deg)";
-            } else {
-                dockCollapsibleWrapper.style.maxHeight = "0px";
-                dockChevron.style.transform = "rotate(0deg)";
+            dockExpandTrigger.setAttribute('aria-expanded', String(isDockExpanded));
+            dockCollapsibleWrapper.style.maxHeight = isDockExpanded ? '300px' : '0px';
+            if (dockChevron) {
+                dockChevron.style.transform = isDockExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
             }
         });
     }
 
-    // --- AUTH LAYER OVERLAYS: DISPLAY CONTROLS ---
-    const displayAuthModal = () => {
-        if (authOverlay) {
-            authOverlay.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
-            authOverlay.classList.add('pointer-events-auto', 'flex');
-        }
-    };
-
-    const dismissAuthModal = () => {
-        if (authOverlay) {
-            authOverlay.classList.remove('pointer-events-auto', 'flex');
-            authOverlay.classList.add('opacity-0', 'pointer-events-none', 'hidden');
-            authOverlay.style.zIndex = "50";
-        }
-    };
-
-    if (globalAccountBtn) globalAccountBtn.addEventListener('click', displayAuthModal);
-    if (authCloseBtn) authCloseBtn.addEventListener('click', dismissAuthModal);
-    if (authGuestBypass) {
-        authGuestBypass.addEventListener('click', (e) => {
-            e.preventDefault();
-            dismissAuthModal();
+    // --- CLEAR THREAD CONTROL ---
+    if (clearThreadBtn && chatThread) {
+        clearThreadBtn.addEventListener('click', () => {
+            if (isGenerating) return;
+            lastMessageContext = '';
+            outputLayerCounter = 1;
+            chatThread.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-40 py-12" id="empty-state">
+                    <p class="text-sm tracking-widest uppercase font-mono text-zinc-500">Workspace Stream Matrix Cleared</p>
+                    <p class="text-xs text-zinc-600 max-w-xs leading-relaxed">Select an active LLM pipeline configuration dock layout at the bottom to inject prompts securely.</p>
+                </div>`;
+            if (window.showToast) window.showToast('Conversation thread cleared.', 'info', 2200);
         });
     }
 
-    // --- GUEST RATE LIMIT & COOLDOWN MANAGEMENT ---
+    // --- GUEST RATE LIMIT (20 TOKENS) & 2-HOUR COOLDOWN MANAGEMENT ---
+    function scheduleCooldownReset(delayMs) {
+        if (cooldownResetTimer) {
+            clearTimeout(cooldownResetTimer);
+            cooldownResetTimer = null;
+        }
+        if (delayMs > 0) {
+            cooldownResetTimer = setTimeout(() => {
+                checkGuestAccess();
+                if (window.showToast) {
+                    window.showToast('Guest tokens reset! 20 free layers are now available.', 'success');
+                }
+            }, delayMs + 250);
+        }
+    }
+
+    function hasPersonalProviderKey() {
+        const userKey = (localStorage.getItem('snx_user_provider_key') || '').trim();
+        return userKey.startsWith('sk-') && userKey.length >= 20;
+    }
+
     function checkGuestAccess() {
-        if (window.isUserLoggedIn) return true;
-
-        const currentTimestamp = Date.now();
-        const cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
-        let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
-
-        // Handle expired cooldown reset & immediate UI restoration
-        if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry)) {
-            localStorage.removeItem('snx_cooldown_expiry');
-            localStorage.setItem('snx_guest_chat_count', '0');
-            currentCount = 0;
-
+        if (hasPersonalProviderKey()) {
+            if (cooldownResetTimer) {
+                clearTimeout(cooldownResetTimer);
+                cooldownResetTimer = null;
+            }
             if (masterInput) {
                 masterInput.disabled = false;
-                masterInput.placeholder = "Guest Access Active (10 free layers remaining)...";
+                masterInput.placeholder = 'Personal API Key Active (Direct OpenRouter routing)...';
             }
-            setButtonStateActive();
+            if (!isGenerating) setButtonStateActive();
+            return true;
         }
 
-        const allocatedPromptsRemaining = Math.max(0, 10 - currentCount);
-
-        if (masterInput && !cooldownExpiry) {
-            masterInput.placeholder = `Guest Access Active (${allocatedPromptsRemaining} free layers remaining)...`;
+        if (window.isUserLoggedIn) {
+            if (cooldownResetTimer) {
+                clearTimeout(cooldownResetTimer);
+                cooldownResetTimer = null;
+            }
+            if (masterInput) {
+                masterInput.disabled = false;
+                masterInput.placeholder = 'Inject prompt into matrix stream...';
+            }
+            if (!isGenerating) setButtonStateActive();
+            return true;
         }
 
-        if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry)) {
-            const timeLeftMs = parseInt(cooldownExpiry) - currentTimestamp;
+        const currentTimestamp = Date.now();
+        let cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
+        let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0', 10);
+        if (Number.isNaN(currentCount) || currentCount < 0) currentCount = 0;
+
+        // Reset expired 2-hour cooldown automatically
+        if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry, 10)) {
+            localStorage.removeItem('snx_cooldown_expiry');
+            localStorage.setItem('snx_guest_chat_count', '0');
+            cooldownExpiry = null;
+            currentCount = 0;
+            if (cooldownResetTimer) {
+                clearTimeout(cooldownResetTimer);
+                cooldownResetTimer = null;
+            }
+        }
+
+        // Handle legacy/inconsistent state where count >= 20 without an expiry timestamp
+        if (!cooldownExpiry && currentCount >= GUEST_LIMIT) {
+            const newExpiry = currentTimestamp + COOLDOWN_MS;
+            localStorage.setItem('snx_cooldown_expiry', String(newExpiry));
+            cooldownExpiry = String(newExpiry);
+        }
+
+        // Locked state ONLY when guest tokens are exhausted
+        if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry, 10)) {
+            const timeLeftMs = parseInt(cooldownExpiry, 10) - currentTimestamp;
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
 
             if (masterInput) {
                 masterInput.disabled = true;
-                masterInput.placeholder = `Guest quota exhausted. Sign up or wait ${minutesLeftTotal}m to unlock.`;
+                masterInput.placeholder = `Guest quota exhausted (0 / ${GUEST_LIMIT}). Sign in or wait ${minutesLeftTotal}m to unlock.`;
             }
 
-            if (sendBtn) {
+            if (sendBtn && !isGenerating) {
                 sendBtn.disabled = true;
-                sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed";
-                sendBtn.innerHTML = `<span>Locked</span>`;
+                sendBtn.className = 'absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed';
+                sendBtn.innerHTML = '<span>Locked</span>';
             }
+
+            scheduleCooldownReset(timeLeftMs);
             return false;
         }
 
+        const remaining = Math.max(0, GUEST_LIMIT - currentCount);
+        if (masterInput) {
+            masterInput.disabled = false;
+            masterInput.placeholder = `Guest Access Active (${remaining} / ${GUEST_LIMIT} free layers remaining)...`;
+        }
+        if (!isGenerating) setButtonStateActive();
         return true;
     }
 
-    // --- METADATA DIRECTORY ENGINE ---
+    // Shared access sync entry point for auth.js
+    window.syncWorkspaceAccess = () => checkGuestAccess();
+
+    // --- METADATA DIRECTORY ENGINE (WITH SHORT-LIVED CACHE) ---
+    function readCachedModels() {
+        try {
+            const raw = sessionStorage.getItem(MODEL_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.data) || Date.now() - parsed.ts > MODEL_CACHE_TTL_MS) {
+                return null;
+            }
+            return parsed.data;
+        } catch {
+            return null;
+        }
+    }
+
+    function writeCachedModels(models) {
+        try {
+            sessionStorage.setItem(MODEL_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: models }));
+        } catch {
+            // Ignore storage quota errors
+        }
+    }
+
     async function initializeModelMatrix() {
         try {
-            const res = await fetch('/api/chat', { method: 'GET' });
-            const data = await res.json();
+            let modelList = readCachedModels();
 
-            if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
-                throw new Error(data.error || "Index data empty or invalid backend format");
+            if (!modelList) {
+                const res = await fetch('/api/chat', {
+                    method: 'GET',
+                    signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined
+                });
+                const data = await res.json();
+
+                if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
+                    throw new Error(data.error || 'Index data empty or invalid backend format');
+                }
+                modelList = data.data;
+                writeCachedModels(modelList);
             }
 
-            const freeChatModels = data.data.filter(model => {
+            const freeChatModels = modelList.filter(model => {
+                if (!model || typeof model.id !== 'string') return false;
                 const isFree = model.id.includes(':free') || (model.pricing && parseFloat(model.pricing.prompt) === 0);
                 const modelIdLower = model.id.toLowerCase();
                 const nameLower = (model.name || '').toLowerCase();
@@ -209,33 +294,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
 
                 const isWorkingFine = !isDeprecated && !isUnstable;
+                const slugPart = model.id.includes('/') ? model.id.split('/')[1] : model.id;
+                const safeName = (model.name || slugPart || model.id).replace('(free)', '').replace(':free', '').trim();
+                const shortCode = (slugPart || model.id).replace(':free', '').substring(0, 3).toUpperCase() || 'AI';
 
                 modelMetadataRegistry[model.id] = {
-                    name: model.name || model.id.split('/')[1].replace(':free', ''),
-                    short: model.id.split('/')[1].substring(0, 3).toUpperCase()
+                    name: safeName,
+                    short: shortCode
                 };
 
                 const btn = document.createElement('button');
-                let visualName = model.name.replace('(free)', '').replace(':free', '').trim();
+                btn.type = 'button';
 
                 if (isWorkingFine) {
-                    btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-800 text-zinc-400 bg-zinc-950/40 hover:text-white hover:border-zinc-700 transition-all duration-150 focus:outline-none cursor-pointer";
-                    btn.textContent = visualName;
+                    btn.className = 'px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-800 text-zinc-400 bg-zinc-950/40 hover:text-white hover:border-zinc-700 transition-all duration-150 focus:outline-none cursor-pointer';
+                    btn.textContent = safeName;
                     activeOnlineCount++;
                 } else {
-                    btn.className = "px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-900/60 text-zinc-600 bg-zinc-950/10 opacity-30 pointer-events-none line-through";
-                    btn.textContent = `${visualName} [DOWN]`;
+                    btn.className = 'px-2.5 py-1 text-[10px] font-mono rounded-md border border-zinc-900/60 text-zinc-600 bg-zinc-950/10 opacity-30 pointer-events-none line-through';
+                    btn.textContent = `${safeName} [DOWN]`;
                     btn.disabled = true;
                 }
 
                 btn.setAttribute('data-model-id', model.id);
 
                 if (isWorkingFine) {
-                    // MODEL SWITCH EVENT: Compresses history ONLY when switching to a different model
                     btn.addEventListener('click', async () => {
                         if (isGenerating) return;
-
-                        // Prevent re-triggering if clicking the already active model
                         if (selectedModelId === model.id) return;
 
                         document.querySelectorAll('#dynamic-model-dock button:not([disabled])').forEach(b => {
@@ -245,9 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.classList.add('border-luxury-gold/40', 'text-luxury-gold', 'bg-luxury-gold/5');
                         btn.classList.remove('border-zinc-800', 'text-zinc-400');
 
-                        // Compress memory only if switching to a new model and chat history exists
                         if (chatThread && chatThread.querySelectorAll('.bg-luxury-surface').length > 0) {
-                            if (statusText) statusText.textContent = "Compressing context for new model...";
+                            if (statusText) statusText.textContent = 'Compressing context for new model...';
                             lastMessageContext = await generateCompressedMemory();
                         }
 
@@ -264,8 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.click();
                         functionalModelSelected = true;
                     }
-                } else {
-                    if (dynamicModelDock) dynamicModelDock.appendChild(btn);
+                } else if (dynamicModelDock) {
+                    dynamicModelDock.appendChild(btn);
                 }
             });
 
@@ -274,26 +358,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (dockCounterBadge) dockCounterBadge.textContent = activeOnlineCount;
+            if (dockCounterBadge) dockCounterBadge.textContent = String(activeOnlineCount);
+            checkGuestAccess();
 
-            if (checkGuestAccess()) {
-                if (masterInput) {
-                    masterInput.disabled = false;
-                    masterInput.placeholder = "Type instructions for the next model layer...";
-                }
-                setButtonStateActive();
-            }
-
-            if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+            if (statusGlow) statusGlow.className = 'h-2 w-2 rounded-full bg-emerald-500 animate-pulse';
             if (statusText) statusText.textContent = `${activeOnlineCount} Layers Online`;
-
         } catch (err) {
-            console.error("Matrix compilation failed, falling back to router wrapper:", err);
+            console.error('Matrix compilation failed, falling back to router wrapper:', err);
             setupFallbackModel();
         }
     }
 
-    // --- FALLBACK WHEN MODEL MATRIX FAILS ---
     function setupFallbackModel() {
         activeOnlineCount = 0;
         selectedModelId = 'openrouter/free';
@@ -301,22 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (dynamicModelDock) {
             dynamicModelDock.innerHTML = `
-                <button class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
+                <button type="button" data-model-id="openrouter/free" class="px-2.5 py-1 text-[10px] font-mono rounded-md border border-luxury-gold/40 text-luxury-gold bg-luxury-gold/5 focus:outline-none">
                     SourNexZ Router
                 </button>`;
         }
 
-        if (dockCounterBadge) dockCounterBadge.textContent = "1";
+        if (dockCounterBadge) dockCounterBadge.textContent = '1';
+        checkGuestAccess();
 
-        if (checkGuestAccess()) {
-            if (masterInput) {
-                masterInput.disabled = false;
-                masterInput.placeholder = "Type instructions...";
-            }
-            setButtonStateActive();
-        }
-        if (statusGlow) statusGlow.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
-        if (statusText) statusText.textContent = "SourNexZ Router Active";
+        if (statusGlow) statusGlow.className = 'h-2 w-2 rounded-full bg-amber-500 animate-pulse';
+        if (statusText) statusText.textContent = 'SourNexZ Router Active';
     }
 
     // --- UI RE-STATE STREAMS ---
@@ -324,14 +393,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sendBtn) return;
         isGenerating = false;
         sendBtn.disabled = false;
-        sendBtn.className = "absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer";
-        sendBtn.innerHTML = `<span>Run</span>`;
+        sendBtn.className = 'absolute right-2 px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer';
+        sendBtn.innerHTML = '<span>Run</span>';
     }
 
     function setButtonStateLoading() {
         if (!sendBtn) return;
         isGenerating = true;
-        sendBtn.className = "absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse";
+        sendBtn.disabled = false;
+        sendBtn.className = 'absolute right-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer animate-pulse';
         sendBtn.innerHTML = `
             <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -340,14 +410,16 @@ document.addEventListener('DOMContentLoaded', () => {
             <span>Stop</span>`;
     }
 
+    // XSS-safe user message append
     function appendUserMessage(text) {
-        if (emptyState) emptyState.remove();
+        const emptyEl = document.getElementById('empty-state');
+        if (emptyEl) emptyEl.remove();
 
         const userHtml = `
             <div class="flex items-start space-x-4 justify-end animate-fade-in mb-4">
                 <div class="bg-luxury-surface border border-luxury-border/60 p-4 rounded-xl max-w-[85%] text-right">
                     <p class="text-xs text-zinc-500 tracking-wider uppercase mb-1">User Prompt</p>
-                    <p class="text-sm text-white leading-relaxed">${text}</p>
+                    <p class="text-sm text-white leading-relaxed whitespace-pre-wrap">${escapeHtml(text)}</p>
                 </div>
                 <div class="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 text-[10px] text-zinc-400 font-bold">YOU</div>
             </div>`;
@@ -357,30 +429,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // XSS-safe model response skeleton
     function appendModelSkeleton(modelKey, userPrompt) {
         const conf = modelMetadataRegistry[modelKey] || { name: 'Unknown Target Node', short: 'AI' };
-        const uniqueId = `seq-${Date.now()}`;
-        const contextPreview = lastMessageContext ? lastMessageContext.substring(0, 60) + '...' : 'None (Initial Entry)';
+        uniqueSeqCounter += 1;
+        const uniqueId = `seq-${Date.now()}-${uniqueSeqCounter}`;
+        const contextPreview = lastMessageContext ? `${lastMessageContext.substring(0, 60)}...` : 'None (Initial Entry)';
 
         const modelHtml = `
             <div class="flex items-start space-x-4 animate-fade-in mb-4">
-                <div id="${uniqueId}-short" class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${conf.short}</div>
+                <div id="${uniqueId}-short" class="h-8 w-8 rounded border border-zinc-800 text-zinc-400 bg-zinc-950 flex items-center justify-center flex-shrink-0 text-[10px] font-bold tracking-tighter">${escapeHtml(conf.short)}</div>
                 <div class="bg-luxury-surface border border-luxury-border p-4 rounded-xl shadow-gold-glow max-w-[85%] w-full">
                     <div class="flex items-center justify-between border-b border-luxury-border/40 pb-2 mb-3">
-                        <p id="${uniqueId}-name" class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${conf.name}</p>
-                        <button onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
+                        <p id="${uniqueId}-name" class="text-xs text-luxury-gold tracking-wider uppercase font-semibold">${escapeHtml(conf.name)}</p>
+                        <button type="button" onclick="toggleMetadata('${uniqueId}')" class="flex items-center space-x-1 text-[10px] text-zinc-500 hover:text-luxury-gold focus:outline-none cursor-pointer">
                             <span>Inspect Layer ${outputLayerCounter}</span>
                             <svg id="chev-${uniqueId}" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                     </div>
                     <div id="meta-${uniqueId}" class="hidden mb-3 p-2.5 bg-luxury-dark/60 border border-luxury-border/60 rounded-lg text-[11px] font-mono text-zinc-400 space-y-1">
-                        <div><span class="text-luxury-gold/70">Instruction:</span> "${userPrompt}"</div>
-                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span id="${uniqueId}-tag" class="text-zinc-500">${modelKey}</span></div>
-                        <div><span class="text-luxury-gold/70">Inherited Context:</span> "${contextPreview}"</div>
+                        <div><span class="text-luxury-gold/70">Instruction:</span> "${escapeHtml(userPrompt)}"</div>
+                        <div><span class="text-luxury-gold/70">Dynamic ID Tag:</span> <span id="${uniqueId}-tag" class="text-zinc-500">${escapeHtml(modelKey)}</span></div>
+                        <div><span class="text-luxury-gold/70">Inherited Context:</span> "<span id="${uniqueId}-ctx">${escapeHtml(contextPreview)}</span>"</div>
                     </div>
-                    <p class="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap" id="${uniqueId}-text">
+                    <div class="text-sm text-zinc-300 leading-relaxed" id="${uniqueId}-text">
                         <span class="italic text-zinc-500 animate-pulse">Routing instruction sequence via secure server...</span>
-                    </p>
+                    </div>
                 </div>
             </div>`;
         if (chatThread) {
@@ -390,14 +464,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return uniqueId;
     }
 
-    // --- PIPELINE EXECUTION ENGINE ---
-    async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, abortSignal) {
+    // --- PIPELINE EXECUTION ENGINE WITH PER-REQUEST TIMEOUT ---
+    async function fetchLiveAIResponse(modelId, currentPrompt, fallbackContext, manualSignal) {
+        const requestController = new AbortController();
+        const onManualAbort = () => requestController.abort('manual');
+        if (manualSignal.aborted) {
+            return 'Generation terminated by operator. Core context detached.';
+        }
+        manualSignal.addEventListener('abort', onManualAbort, { once: true });
+
+        const timeoutId = setTimeout(() => {
+            requestController.abort('timeout');
+        }, MODEL_REQUEST_TIMEOUT_MS);
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getRequestHeaders(),
                 body: JSON.stringify({ model: modelId, currentPrompt, fallbackContext }),
-                signal: abortSignal
+                signal: requestController.signal
             });
 
             const data = await response.json();
@@ -407,12 +492,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `[Execution Error]: ${errorMsg}`;
             }
 
-            return data.text || "No response returned from layer.";
+            return data.text || 'No response returned from layer.';
         } catch (err) {
-            if (err.name === 'AbortError') {
-                return `Generation terminated by operator. Core context detached.`;
+            if (manualSignal.aborted) {
+                return 'Generation terminated by operator. Core context detached.';
+            }
+            if (err.name === 'AbortError' || requestController.signal.reason === 'timeout') {
+                return '[Connection Error]: Layer request timed out.';
             }
             return `[Connection Error]: ${err.message}`;
+        } finally {
+            clearTimeout(timeoutId);
+            manualSignal.removeEventListener('abort', onManualAbort);
         }
     }
 
@@ -424,20 +515,27 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-            if (!checkGuestAccess()) return;
+        if (!checkGuestAccess()) {
+            if (typeof window.openAuthModal === 'function') {
+                window.openAuthModal('Guest token limit (20/20) reached. Sign in to continue, or close to read your chat history until the 2-hour reset.');
+            }
+            return;
+        }
 
         const promptText = masterInput ? masterInput.value.trim() : '';
         if (!promptText || !selectedModelId) return;
 
-        if (!window.isUserLoggedIn) {
-            let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0');
-            currentCount++;
-            localStorage.setItem('snx_guest_chat_count', currentCount.toString());
+        let justExhaustedGuestTokens = false;
+        if (!window.isUserLoggedIn && !hasPersonalProviderKey()) {
+            let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0', 10);
+            if (Number.isNaN(currentCount) || currentCount < 0) currentCount = 0;
+            currentCount += 1;
+            localStorage.setItem('snx_guest_chat_count', String(currentCount));
 
-            if (currentCount >= 10) {
-                const twoHoursInMs = 2 * 60 * 60 * 1000;
-                const expiryTime = Date.now() + twoHoursInMs;
-                localStorage.setItem('snx_cooldown_expiry', expiryTime.toString());
+            if (currentCount >= GUEST_LIMIT) {
+                const expiryTime = Date.now() + COOLDOWN_MS;
+                localStorage.setItem('snx_cooldown_expiry', String(expiryTime));
+                justExhaustedGuestTokens = true;
             }
         }
 
@@ -462,16 +560,19 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         let successfulResponse = '';
-        let usedModelId = selectedModelId;
 
-        // Generate compressed memory once before trying the fallback queue
+        // Single-pass memory compression before entering failover loop
         if (chatThread && chatThread.querySelectorAll('.bg-luxury-surface').length > 2) {
-            if (statusText) statusText.textContent = "Compressing context memory...";
+            if (statusText) statusText.textContent = 'Compressing context memory...';
             lastMessageContext = await generateCompressedMemory();
             if (statusText) {
                 statusText.textContent = activeOnlineCount > 0
                     ? `${activeOnlineCount} Layers Online`
-                    : "SourNexZ Router Active";
+                    : 'SourNexZ Router Active';
+            }
+            const ctxEl = document.getElementById(`${textTargetId}-ctx`);
+            if (ctxEl) {
+                ctxEl.textContent = lastMessageContext ? `${lastMessageContext.substring(0, 60)}...` : 'None (Initial Entry)';
             }
         }
 
@@ -491,8 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tagEl) tagEl.textContent = currentTargetModel;
 
             if (i > 0 && textTarget) {
-                textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${conf.name})...</span>`;
-                // Reuse the single compressed 'lastMessageContext' across all fallback tries
+                textTarget.innerHTML = `<span class="italic text-amber-400/80 animate-pulse">Switching to backup layer (${escapeHtml(conf.name)})...</span>`;
             }
 
             const liveOutputText = await fetchLiveAIResponse(
@@ -506,19 +606,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const isInvalidOutput =
                 !liveOutputText ||
-                liveOutputText.startsWith("[Execution Error]") ||
-                liveOutputText.startsWith("[Connection Error]") ||
-                normalizedText.startsWith("user safety:") ||
-                normalizedText.includes("gateway exception") ||
-                normalizedText.includes("insufficient credits") ||
-                normalizedText.includes("resourceexhausted") ||
-                normalizedText.includes("provider returned error") ||
-                normalizedText.includes("generation terminated by operator") ||
-                normalizedText.includes("secure link failed");
+                liveOutputText.startsWith('[Execution Error]') ||
+                liveOutputText.startsWith('[Connection Error]') ||
+                normalizedText.startsWith('user safety:') ||
+                normalizedText.includes('gateway exception') ||
+                normalizedText.includes('insufficient credits') ||
+                normalizedText.includes('resourceexhausted') ||
+                normalizedText.includes('provider returned error') ||
+                normalizedText.includes('generation terminated by operator') ||
+                normalizedText.includes('secure link failed');
 
             if (!isInvalidOutput) {
                 successfulResponse = liveOutputText;
-                usedModelId = currentTargetModel;
                 break;
             } else {
                 if (currentAbortController.signal.aborted) break;
@@ -526,12 +625,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Update UI and accumulate context
+        // Update UI safely and accumulate context
         if (textTarget) {
             if (currentAbortController.signal.aborted) {
-                textTarget.innerText = "Generation terminated by operator. Core context detached.";
+                textTarget.textContent = 'Generation terminated by operator. Core context detached.';
             } else if (successfulResponse) {
-                textTarget.innerText = successfulResponse;
+                if (typeof window.renderSafeMarkdown === 'function') {
+                    window.renderSafeMarkdown(textTarget, successfulResponse);
+                } else {
+                    textTarget.textContent = successfulResponse;
+                }
 
                 if (!lastMessageContext) {
                     lastMessageContext = `User: ${promptText}\nAssistant: ${successfulResponse}`;
@@ -539,14 +642,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastMessageContext += `\nUser: ${promptText}\nAssistant: ${successfulResponse}`;
                 }
             } else {
-                textTarget.innerText = "All available network model layers are temporarily busy or rate-limited. Please try again shortly.";
+                textTarget.textContent = 'All available network model layers are temporarily busy or rate-limited. Please try again shortly.';
             }
         }
 
-        outputLayerCounter++;
+        outputLayerCounter += 1;
+        isGenerating = false;
 
-        if (checkGuestAccess()) {
+        const hasAccess = checkGuestAccess();
+        if (hasAccess) {
             setButtonStateActive();
+        } else if (justExhaustedGuestTokens && typeof window.openAuthModal === 'function') {
+            window.openAuthModal('All 20 guest tokens have been used. Sign in to continue, or close this window to keep reading your chat until the 2-hour reset.');
         }
 
         if (chatThread) chatThread.scrollTop = chatThread.scrollHeight;
@@ -564,13 +671,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize core matrix engine on load
+    // Initialize directly into guest chat workspace & load dynamic model dock
     checkGuestAccess();
     initializeModelMatrix();
 });
 
 // Global metadata inspection utility
-window.toggleMetadata = function(id) {
+window.toggleMetadata = function (id) {
     const metaCard = document.getElementById(`meta-${id}`);
     const chevron = document.getElementById(`chev-${id}`);
     if (metaCard) {
