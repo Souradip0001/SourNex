@@ -1,10 +1,11 @@
 {
   "name": "luxury-multi-ai",
-  "version": "1.0.0",
-  "description": "Luxury Multi-AI Orchestration Platform",
+  "version": "1.1.0",
+  "description": "SourNex Engine - Multi-Layer AI Orchestration Platform",
+  "type": "module",
   "main": "index.html",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/ && cp -r assets dist/ 2>/dev/null || true",
+    "build": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});for(const f of['index.html','terms.html','privacy.html','robots.txt','sitemap.xml','favicon.svg','site.webmanifest']){if(fs.existsSync(f))fs.copyFileSync(f,'dist/'+f);else console.warn('Skipping missing file:',f);}if(fs.existsSync('assets'))fs.cpSync('assets','dist/assets',{recursive:true});\"",
     "start": "echo 'No start script needed for static hosting'"
   }
 }
