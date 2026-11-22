@@ -65,8 +65,8 @@ svg {
     outline-offset: 2px;
 }
 
-/* --- Glassmorphism Header & Footer --- */
-header, footer {
+/* --- Glassmorphism Header & Floating Composer --- */
+header, .snx-floating-composer {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -171,10 +171,12 @@ header, footer {
     color: #ffffff;
 }
 
-/* --- Chat Thread Scroll & Selection --- */
+/* --- Chat Thread Scroll, Pinch-Zoom Message Scaling & Selection --- */
 #chat-thread {
+    --snx-msg-scale: 1;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
 }
 
 #chat-thread, #chat-thread * {
@@ -182,24 +184,23 @@ header, footer {
     -webkit-user-select: text;
 }
 
+.snx-msg-text {
+    font-size: calc(0.875rem * var(--snx-msg-scale, 1));
+    line-height: 1.58;
+}
+
 /* --- Safe Markdown & Code Blocks --- */
 .snx-markdown {
-    font-size: 1rem;
-    line-height: 1.65;
+    font-size: calc(0.875rem * var(--snx-msg-scale, 1));
+    line-height: 1.58;
     color: #e4e4e7;
     overflow-wrap: anywhere;
     word-break: break-word;
     min-width: 0;
 }
 
-@media (min-width: 640px) {
-    .snx-markdown {
-        font-size: 0.9375rem;
-    }
-}
-
 .snx-markdown > * + * {
-    margin-top: 0.7rem;
+    margin-top: 0.55rem;
 }
 
 .snx-markdown h1,
@@ -208,12 +209,12 @@ header, footer {
     color: #ffffff;
     font-weight: 600;
     line-height: 1.35;
-    margin-top: 0.9rem;
+    margin-top: 0.75rem;
 }
 
-.snx-markdown h1 { font-size: 1.2rem; }
-.snx-markdown h2 { font-size: 1.075rem; }
-.snx-markdown h3 { font-size: 1rem; color: #f4e3a3; }
+.snx-markdown h1 { font-size: calc(1.08rem * var(--snx-msg-scale, 1)); }
+.snx-markdown h2 { font-size: calc(0.98rem * var(--snx-msg-scale, 1)); }
+.snx-markdown h3 { font-size: calc(0.9rem * var(--snx-msg-scale, 1)); color: #f4e3a3; }
 
 .snx-markdown ul,
 .snx-markdown ol {
@@ -292,12 +293,12 @@ header, footer {
 
 .snx-code-block pre {
     margin: 0;
-    padding: 0.85rem;
+    padding: 0.75rem;
     max-width: 100%;
     overflow-x: auto;
     font-family: var(--font-mono);
-    font-size: 0.84rem;
-    line-height: 1.55;
+    font-size: calc(0.78rem * var(--snx-msg-scale, 1));
+    line-height: 1.5;
     color: #e4e4e7;
 }
 
@@ -347,7 +348,7 @@ header, footer {
 .snx-thinking-box {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.55rem;
     width: 100%;
     text-align: left;
 }
@@ -355,8 +356,8 @@ header, footer {
 .snx-thinking-header {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    font-size: 0.875rem;
+    gap: 0.5rem;
+    font-size: calc(0.8125rem * var(--snx-msg-scale, 1));
     color: #e4e4e7;
     font-weight: 500;
 }
@@ -364,13 +365,13 @@ header, footer {
 .snx-thinking-dots {
     display: inline-flex;
     align-items: center;
-    gap: 0.28rem;
+    gap: 0.24rem;
     flex-shrink: 0;
 }
 
 .snx-thinking-dots span {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 9999px;
     background-color: var(--accent-gold);
     animation: snx-dot-bounce 1.3s infinite ease-in-out both;
@@ -394,17 +395,29 @@ header, footer {
 .snx-thinking-steps {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    padding-left: 0.25rem;
+    gap: 0.35rem;
+    padding-left: 0.15rem;
 }
 
 .snx-thinking-step {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8125rem;
+    gap: 0.45rem;
+    font-size: calc(0.75rem * var(--snx-msg-scale, 1));
     color: #71717a;
+    animation: snx-step-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+@keyframes snx-step-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .snx-thinking-step.is-active {
@@ -413,6 +426,35 @@ header, footer {
 
 .snx-thinking-step.is-done {
     color: #a1a1aa;
+}
+
+/* --- Message Zoom Badge --- */
+#snx-zoom-indicator {
+    position: fixed;
+    top: 3.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    z-index: 45;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 9999px;
+    background: rgba(18, 18, 22, 0.94);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: #e4e4e7;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#snx-zoom-indicator.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
 }
 
 .snx-shimmer-stack {
