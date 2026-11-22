@@ -219,89 +219,100 @@
     </div>
 
     <!-- MAIN HEADER -->
-    <header class="border-b border-luxury-border bg-luxury-dark/60 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3.5 w-full shrink-0 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-40">
+    <header class="border-b border-luxury-border bg-luxury-dark/60 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 w-full shrink-0 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-40">
         <div class="flex items-center min-w-0 shrink-0">
-            <span class="text-sm sm:text-base tracking-wider font-semibold text-white whitespace-nowrap">SourNex Engine</span>
+            <span class="text-xs sm:text-sm tracking-wider font-semibold text-white whitespace-nowrap">SourNex Engine</span>
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-            <button id="global-account-btn" type="button" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-950 text-xs text-zinc-300 hover:text-white hover:border-zinc-700 transition-all cursor-pointer focus:outline-none whitespace-nowrap min-w-0">
-                <div class="h-2 w-2 rounded-full bg-zinc-500 shrink-0" id="account-status-dot"></div>
-                <span id="account-status-label" class="font-mono text-xs truncate max-w-[96px] sm:max-w-none">Guest Profile</span>
-                <span id="header-username" class="hidden font-mono text-xs text-luxury-gold pl-1.5 border-l border-zinc-800 truncate max-w-[80px] sm:max-w-[140px]"></span>
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button id="global-account-btn" type="button" class="min-h-[34px] flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-zinc-800 bg-zinc-950 text-[11px] text-zinc-300 hover:text-white hover:border-zinc-700 transition-all cursor-pointer focus:outline-none whitespace-nowrap min-w-0">
+                <div class="h-1.5 w-1.5 rounded-full bg-zinc-500 shrink-0" id="account-status-dot"></div>
+                <span id="account-status-label" class="font-mono text-[11px] truncate max-w-[88px] sm:max-w-none">Guest Profile</span>
+                <span id="header-username" class="hidden font-mono text-[11px] text-luxury-gold pl-1.5 border-l border-zinc-800 truncate max-w-[75px] sm:max-w-[130px]"></span>
             </button>
 
-            <div class="flex items-center gap-1.5 sm:gap-2 border-l border-luxury-border pl-2 sm:pl-4 min-w-0">
-                <div id="engine-status-glow" class="h-2 w-2 rounded-full bg-zinc-600 shrink-0"></div>
-                <span id="engine-status-text" class="text-xs font-mono tracking-wide text-zinc-400 truncate max-w-[88px] sm:max-w-none">Indexing...</span>
+            <div class="flex items-center gap-1.5 border-l border-luxury-border pl-2 sm:pl-3 min-w-0">
+                <div id="engine-status-glow" class="h-1.5 w-1.5 rounded-full bg-zinc-600 shrink-0"></div>
+                <span id="engine-status-text" class="text-[11px] font-mono tracking-wide text-zinc-400 truncate max-w-[82px] sm:max-w-none">Indexing...</span>
             </div>
         </div>
     </header>
 
+    <!-- MESSAGE ZOOM BADGE (Visible only while zooming chat messages) -->
+    <div id="snx-zoom-indicator" role="status" aria-live="polite">
+        <span id="snx-zoom-label">Messages 100%</span>
+        <button type="button" id="snx-zoom-reset-btn" class="text-luxury-gold hover:underline cursor-pointer">Reset</button>
+    </div>
+
     <!-- THREAD MATRIX CONTAINER -->
-    <main class="flex-1 min-h-0 min-w-0 w-full max-w-4xl mx-auto overflow-y-auto overflow-x-hidden px-3 sm:px-6 pt-4 sm:pt-6 pb-6 space-y-4 sm:space-y-5" id="chat-thread">
-        <div id="system-welcome-msg" class="w-full min-w-0 bg-luxury-surface border border-luxury-border rounded-2xl p-4 sm:p-5 space-y-2 shadow-gold-glow">
-            <div class="flex items-center justify-between gap-2 border-b border-luxury-border/50 pb-2">
-                <span class="text-xs font-semibold uppercase tracking-wider text-luxury-gold">SourNex System</span>
-                <span class="text-xs font-mono text-zinc-500">Welcome</span>
+    <main class="flex-1 min-h-0 min-w-0 w-full max-w-3xl mx-auto overflow-y-auto overflow-x-hidden px-3 sm:px-5 pt-3 sm:pt-4 pb-36 space-y-3" id="chat-thread">
+        <div id="system-welcome-msg" class="w-full min-w-0 bg-luxury-surface border border-luxury-border rounded-xl p-3 sm:p-4 space-y-1.5 shadow-gold-glow">
+            <div class="flex items-center justify-between gap-2 border-b border-luxury-border/50 pb-1.5">
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-luxury-gold">SourNex System</span>
+                <span class="text-[11px] font-mono text-zinc-500">Welcome</span>
             </div>
-            <div class="text-base sm:text-[15px] text-zinc-200 leading-relaxed space-y-1.5">
+            <div class="snx-msg-text text-zinc-200 space-y-1">
                 <p class="font-medium text-white">Hello! Welcome to SourNex Engine.</p>
                 <p>This workspace lets you chat across multiple AI models in one place with automatic backup switching whenever a model is busy or unavailable. You can start right away with 20 free guest messages every 2 hours, or connect your own OpenRouter key anytime in Account settings.</p>
             </div>
         </div>
     </main>
 
-    <!-- FOOTER CONTROLS & DOCK -->
-    <footer class="border-t border-luxury-border bg-luxury-surface/80 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3.5 w-full shrink-0 sticky bottom-0 z-40">
-        <div class="max-w-4xl w-full mx-auto space-y-2.5 min-w-0">
+    <!-- FLOATING COMPOSER & COMPACT AI DROPDOWN -->
+    <footer class="fixed bottom-0 left-0 right-0 z-40 pointer-events-none px-3 sm:px-5 pb-2.5 sm:pb-3.5 pt-6 bg-gradient-to-t from-[#070709] via-[#070709]/85 to-transparent">
+        <div class="max-w-3xl w-full mx-auto pointer-events-auto space-y-1.5 min-w-0">
 
-            <div class="space-y-2 w-full border border-luxury-border bg-luxury-surface/40 p-2.5 sm:p-3 rounded-xl shadow-inner">
-                <div class="flex items-center justify-between gap-2 sm:gap-3">
-                    <button type="button" id="dock-expand-trigger" aria-expanded="false" aria-controls="dock-collapsible-wrapper" class="flex-1 min-h-[36px] flex items-center justify-between gap-2 cursor-pointer select-none focus:outline-none text-left min-w-0">
-                        <span class="text-xs font-mono tracking-wide text-zinc-400 uppercase flex items-center gap-2 min-w-0 truncate">
-                            <span class="truncate">Active Models</span>
-                            <span id="dock-counter-badge" class="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded font-mono shrink-0">0</span>
-                        </span>
-                        <span class="text-zinc-400 hover:text-luxury-gold transition-colors shrink-0">
-                            <svg id="dock-chevron" class="w-4 h-4 transition-transform duration-200" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </span>
+            <div class="snx-floating-composer relative border border-luxury-border rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.65)] p-2 sm:p-2.5 space-y-1.5">
+                <!-- HARDENED INPUT ROW -->
+                <div class="flex items-end gap-2">
+                    <textarea
+                        id="master-input"
+                        rows="1"
+                        placeholder="Message SourNex (20 / 20 free)..."
+                        class="flex-1 min-w-0 bg-transparent text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none px-1.5 py-1.5 leading-snug max-h-28 overflow-y-auto font-normal disabled:opacity-40"
+                    ></textarea>
+
+                    <button
+                        id="send-btn"
+                        type="button"
+                        class="shrink-0 min-h-[34px] px-3.5 py-1.5 text-[11px] font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer"
+                    >
+                        <span>Run</span>
                     </button>
-                    <button type="button" id="clear-thread-btn" class="min-h-[36px] text-xs font-mono uppercase tracking-wider text-zinc-400 hover:text-luxury-gold transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 cursor-pointer whitespace-nowrap shrink-0">
+                </div>
+
+                <!-- COMPACT AI DROPDOWN & CLEAR ROW -->
+                <div class="relative flex items-center justify-between gap-2 pt-1.5 border-t border-white/[0.06]">
+                    <div class="relative min-w-0 flex-1">
+                        <button type="button" id="dock-expand-trigger" aria-expanded="false" aria-haspopup="listbox" aria-controls="dock-collapsible-wrapper" class="inline-flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] max-w-full rounded-lg border border-zinc-800 bg-zinc-950/80 hover:border-luxury-gold/40 text-[11px] font-mono text-zinc-300 hover:text-white transition-colors cursor-pointer min-w-0">
+                            <span class="h-1.5 w-1.5 rounded-full bg-luxury-gold shrink-0"></span>
+                            <span id="selected-model-label" class="truncate max-w-[160px] sm:max-w-[260px]">Loading AI...</span>
+                            <span id="dock-counter-badge" class="text-[10px] text-zinc-500 shrink-0">(0)</span>
+                            <svg id="dock-chevron" class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-150 shrink-0" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                            </svg>
+                        </button>
+
+                        <!-- SMALL FLOATING UPWARD AI DROPDOWN MENU -->
+                        <div id="dock-collapsible-wrapper" class="hidden absolute bottom-full left-0 mb-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-zinc-800 bg-[#121216]/98 backdrop-blur-xl shadow-2xl p-1.5 z-50">
+                            <div class="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500 border-b border-white/[0.06] mb-1">
+                                Available AI Models
+                            </div>
+                            <div class="flex flex-col gap-0.5 max-h-52 overflow-y-auto" id="dynamic-model-dock" role="listbox">
+                                <span class="text-xs text-zinc-500 italic px-2 py-1.5">Loading available models...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" id="clear-thread-btn" class="min-h-[30px] text-[11px] font-mono uppercase tracking-wider text-zinc-400 hover:text-luxury-gold transition-colors px-2.5 py-1 rounded-lg border border-zinc-800/80 cursor-pointer whitespace-nowrap shrink-0">
                         Clear
                     </button>
                 </div>
-
-                <div id="dock-collapsible-wrapper" class="transition-all duration-300 ease-in-out overflow-hidden max-h-0">
-                    <div class="flex flex-wrap gap-2 pt-2 max-h-44 overflow-y-auto" id="dynamic-model-dock">
-                        <span class="text-xs text-zinc-500 italic px-2 py-1">Loading available models...</span>
-                    </div>
-                </div>
             </div>
 
-            <!-- HARDENED INPUT FIELD -->
-            <div class="relative bg-luxury-dark/90 border border-luxury-border rounded-xl focus-within:border-luxury-gold/40 transition-all duration-200 shadow-inner flex items-center p-1.5 sm:p-2 pl-3 sm:pl-4">
-                <textarea
-                    id="master-input"
-                    rows="1"
-                    placeholder="Guest Access Active (20 / 20 free messages remaining)..."
-                    class="w-full min-w-0 bg-transparent text-base sm:text-[15px] text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none pr-20 py-2 leading-relaxed font-normal disabled:opacity-40"
-                ></textarea>
-
-                <button
-                    id="send-btn"
-                    type="button"
-                    class="absolute right-1.5 sm:right-2 min-h-[40px] px-4 py-2 text-xs font-bold tracking-wider uppercase rounded-lg bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.98] transition-all focus:outline-none flex items-center space-x-1.5 cursor-pointer"
-                >
-                    <span>Run</span>
-                </button>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 pt-0.5">
-                <span>SourNex Engine · Ephemeral Chat</span>
-                <div class="flex items-center gap-3">
+            <div class="flex items-center justify-between gap-2 px-1 text-[11px] text-zinc-500">
+                <span>SourNex Engine</span>
+                <div class="flex items-center gap-2.5">
                     <a href="/terms.html" class="hover:text-zinc-300 transition-colors">Terms</a>
                     <span aria-hidden="true">&middot;</span>
                     <a href="/privacy.html" class="hover:text-zinc-300 transition-colors">Privacy</a>
@@ -312,12 +323,13 @@
     </footer>
 
     <!-- EXTERNAL DEPENDENCIES -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
     <!-- APPLICATION LOGIC SCRIPTS -->
-    <script src="assets/js/toast.js"></script>
-    <script src="assets/js/markdown.js"></script>
-    <script src="assets/js/auth.js"></script>
-    <script src="assets/js/app.js"></script>
+    <script src="assets/js/toast.js" defer></script>
+    <script src="assets/js/markdown.js" defer></script>
+    <script src="assets/js/auth.js" defer></script>
+    <script src="assets/js/features.js" defer></script>
+    <script src="assets/js/app.js" defer></script>
 </body>
 </html>
