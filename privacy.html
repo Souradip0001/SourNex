@@ -27,17 +27,17 @@
 
         <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
             <h2 class="text-base font-semibold text-white">1. Ephemeral Prompt Processing</h2>
-            <p>Prompts and context memory blocks are processed transiently through our serverless proxy strictly to fulfill your active model request. SourNex Engine does not persist your chat threads in a server database.</p>
+            <p>Prompts and context memory blocks are processed transiently through our serverless proxy strictly to fulfill your active model request. </p>
         </section>
 
         <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
             <h2 class="text-base font-semibold text-white">2. Local Browser Storage</h2>
-            <p>Guest session counters, cooldown timestamps, cached free-model metadata, and any optional provider API key you choose to supply are stored locally in your browser via <code class="font-mono text-zinc-200">localStorage</code> and <code class="font-mono text-zinc-200">sessionStorage</code>.</p>
+            <p>Cached free-model metadata, and any optional provider API key you choose to supply are stored locally in your browser via <code class="font-mono text-zinc-200">localStorage.</code> and <code class="font-mono text-zinc-200">sessionStorage</code>.We Don't Store Your API in our database</p>
         </section>
 
         <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
             <h2 class="text-base font-semibold text-white">3. Account &amp; Authentication Data</h2>
-            <p>If you register an account, your email, optional operator username, and date of birth metadata are managed through Supabase Authentication solely for identity verification and password recovery.</p>
+            <p>If you register an account, your email and basic profile identity (including Google or GitHub OAuth sign-in) are managed through Auth0 Authentication solely for identity verification, session management, and password recovery.</p>
         </section>
 
         <section class="space-y-3 text-sm leading-relaxed text-zinc-400">
