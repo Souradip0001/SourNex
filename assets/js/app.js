@@ -176,18 +176,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- GUEST RATE LIMIT (20 TOKENS) & 2-HOUR COOLDOWN MANAGEMENT ---
-    function scheduleCooldownReset(delayMs) {
+    function scheduleCooldownReset(delayMs, notifyUser = true) {
         if (cooldownResetTimer) {
             clearTimeout(cooldownResetTimer);
             cooldownResetTimer = null;
         }
         if (delayMs > 0) {
+            // Cap single timer delay safely for 32-bit setTimeout environments
+            const safeDelay = Math.min(delayMs + 250, 2147483647);
             cooldownResetTimer = setTimeout(() => {
                 checkGuestAccess();
-                if (window.showToast) {
+                if (notifyUser && window.showToast) {
                     window.showToast('Guest tokens reset! 20 free layers are now available.', 'success');
                 }
-            }, delayMs + 250);
+            }, safeDelay);
         }
     }
 
@@ -224,15 +226,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const currentTimestamp = Date.now();
-        let cooldownExpiry = localStorage.getItem('snx_cooldown_expiry');
+        const rawExpiry = localStorage.getItem('snx_cooldown_expiry');
+        let cooldownExpiry = rawExpiry ? parseInt(rawExpiry, 10) : NaN;
         let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0', 10);
         if (Number.isNaN(currentCount) || currentCount < 0) currentCount = 0;
 
-        // Reset expired 2-hour cooldown automatically
-        if (cooldownExpiry && currentTimestamp >= parseInt(cooldownExpiry, 10)) {
+        // Reset expired 2-hour window automatically (works for both partial and exhausted counts)
+        if (!Number.isNaN(cooldownExpiry) && currentTimestamp >= cooldownExpiry) {
             localStorage.removeItem('snx_cooldown_expiry');
             localStorage.setItem('snx_guest_chat_count', '0');
-            cooldownExpiry = null;
+            cooldownExpiry = NaN;
             currentCount = 0;
             if (cooldownResetTimer) {
                 clearTimeout(cooldownResetTimer);
@@ -240,16 +243,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Handle legacy/inconsistent state where count >= 20 without an expiry timestamp
-        if (!cooldownExpiry && currentCount >= GUEST_LIMIT) {
-            const newExpiry = currentTimestamp + COOLDOWN_MS;
-            localStorage.setItem('snx_cooldown_expiry', String(newExpiry));
-            cooldownExpiry = String(newExpiry);
+        // Clean up legacy partial counts created before window-expiry tracking existed
+        if (Number.isNaN(cooldownExpiry) && currentCount > 0 && currentCount < GUEST_LIMIT) {
+            localStorage.setItem('snx_guest_chat_count', '0');
+            currentCount = 0;
         }
 
-        // Locked state ONLY when guest tokens are exhausted
-        if (cooldownExpiry && currentTimestamp < parseInt(cooldownExpiry, 10)) {
-            const timeLeftMs = parseInt(cooldownExpiry, 10) - currentTimestamp;
+        // Handle legacy/inconsistent state where count >= 20 without an expiry timestamp
+        if (Number.isNaN(cooldownExpiry) && currentCount >= GUEST_LIMIT) {
+            cooldownExpiry = currentTimestamp + COOLDOWN_MS;
+            localStorage.setItem('snx_cooldown_expiry', String(cooldownExpiry));
+        }
+
+        // Locked state ONLY when guest tokens are exhausted within the active 2-hour window
+        if (currentCount >= GUEST_LIMIT && !Number.isNaN(cooldownExpiry) && currentTimestamp < cooldownExpiry) {
+            const timeLeftMs = cooldownExpiry - currentTimestamp;
             const minutesLeftTotal = Math.ceil(timeLeftMs / (1000 * 60));
 
             if (masterInput) {
@@ -263,8 +271,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 sendBtn.innerHTML = '<span>Locked</span>';
             }
 
-            scheduleCooldownReset(timeLeftMs);
+            scheduleCooldownReset(timeLeftMs, true);
             return false;
+        }
+
+        if (currentCount > 0 && !Number.isNaN(cooldownExpiry) && currentTimestamp < cooldownExpiry) {
+            scheduleCooldownReset(cooldownExpiry - currentTimestamp, false);
+        } else if (currentCount === 0 && !Number.isNaN(cooldownExpiry)) {
+            localStorage.removeItem('snx_cooldown_expiry');
         }
 
         const remaining = Math.max(0, GUEST_LIMIT - currentCount);
@@ -449,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusText) statusText.textContent = 'Router Active';
     }
 
-        // --- UI RE-STATE STREAMS ---
+    // --- UI RE-STATE STREAMS ---
     function setButtonStateActive() {
         if (!sendBtn) return;
         isGenerating = false;
@@ -588,14 +602,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let justExhaustedGuestTokens = false;
         if (!window.isUserLoggedIn && !hasPersonalProviderKey()) {
+            const now = Date.now();
+            const existingExpiry = parseInt(localStorage.getItem('snx_cooldown_expiry') || '', 10);
             let currentCount = parseInt(localStorage.getItem('snx_guest_chat_count') || '0', 10);
             if (Number.isNaN(currentCount) || currentCount < 0) currentCount = 0;
+
+            if (Number.isNaN(existingExpiry) || now >= existingExpiry) {
+                currentCount = 0;
+                localStorage.setItem('snx_cooldown_expiry', String(now + COOLDOWN_MS));
+            }
+
             currentCount += 1;
             localStorage.setItem('snx_guest_chat_count', String(currentCount));
 
             if (currentCount >= GUEST_LIMIT) {
-                const expiryTime = Date.now() + COOLDOWN_MS;
-                localStorage.setItem('snx_cooldown_expiry', String(expiryTime));
                 justExhaustedGuestTokens = true;
             }
         }
@@ -765,6 +785,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            checkGuestAccess();
+        }
+    });
+    window.addEventListener('focus', () => checkGuestAccess());
+
     // Initialize directly into guest chat workspace & load dynamic model dock
     checkGuestAccess();
     initializeModelMatrix();
@@ -784,4 +811,3 @@ window.toggleMetadata = function (id) {
         }
     }
 };
-                    
