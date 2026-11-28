@@ -80,64 +80,16 @@
                 <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-luxury-gold/30 flex items-center justify-center mx-auto shadow-gold-glow">
                     <span class="text-luxury-gold font-bold text-base tracking-wider">S</span>
                 </div>
-                <h2 id="auth-title" class="text-sm font-semibold tracking-widest text-white uppercase pt-1">Account Verification</h2>
-                <p class="text-xs text-zinc-500 font-mono tracking-wide">Access Code Matrix Registry</p>
+                <h2 id="auth-title" class="text-sm font-semibold tracking-widest text-white uppercase pt-1">Account Access</h2>
+                <p id="auth-subtitle" class="text-xs text-zinc-500 font-mono tracking-wide">Auth0 Encrypted Identity &bull; Optional API Key</p>
             </div>
 
-            <!-- Dynamic Token Limit Notice Banner -->
+            <!-- Dynamic Token Limit / Verification Notice Banner -->
             <div id="auth-limit-notice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono leading-relaxed">
                 <p id="auth-limit-notice-text" class="text-zinc-200"></p>
             </div>
 
             <form id="credentials-form" class="space-y-3.5">
-
-                <!-- Custom Username Input Container (Visible on Sign Up) -->
-                <div id="username-container" class="space-y-1 hidden">
-                    <div class="flex items-center justify-between gap-2">
-                        <label for="username" class="text-xs font-mono tracking-wide text-zinc-400 uppercase">Operator Alias</label>
-                        <span class="text-[11px] font-mono text-zinc-500 uppercase">Editable Later</span>
-                    </div>
-                    <input id="username" type="text" placeholder="e.g. CyberOperator99" autocomplete="username">
-                </div>
-
-                <!-- Date of Birth Input Container (Visible on Sign Up) -->
-                <div id="dob-container" class="space-y-1 hidden">
-                    <label for="dob" class="text-xs font-mono tracking-wide text-zinc-400 uppercase">Date of Birth</label>
-                    <input id="dob" type="date">
-                </div>
-
-                <!-- Email Address -->
-                <div class="space-y-1">
-                    <label for="email" class="text-xs font-mono tracking-wide text-zinc-400 uppercase">Email Address</label>
-                    <input id="email" type="email" required placeholder="operator@sournex.io" autocomplete="email">
-                </div>
-
-                <!-- Access Cipher -->
-                <div class="space-y-1">
-                    <div class="flex items-center justify-between gap-2">
-                        <label for="password" class="text-xs font-mono tracking-wide text-zinc-400 uppercase">Password</label>
-                        <button type="button" id="forgot-password-link" class="text-xs font-mono text-luxury-gold hover:underline focus:outline-none cursor-pointer">
-                            Forgot Password?
-                        </button>
-                    </div>
-                    <div class="relative">
-                        <input id="password" type="password" placeholder="••••••••" class="w-full pr-11" autocomplete="current-password">
-                        <button type="button" aria-label="Toggle password visibility" aria-pressed="false" class="toggle-password absolute right-2 top-1/2 -translate-y-1/2 min-h-[36px] min-w-[36px] flex items-center justify-center text-zinc-400 hover:text-zinc-200 cursor-pointer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Confirm Access Cipher (Single unique block) -->
-                <div id="confirm-password-container" class="space-y-1 hidden">
-                    <label for="confirm-password" class="text-xs font-mono tracking-wide text-zinc-400 uppercase">Confirm Password</label>
-                    <div class="relative">
-                        <input id="confirm-password" type="password" placeholder="••••••••" class="w-full pr-11" autocomplete="new-password">
-                        <button type="button" aria-label="Toggle confirm password visibility" aria-pressed="false" class="toggle-password absolute right-2 top-1/2 -translate-y-1/2 min-h-[36px] min-w-[36px] flex items-center justify-center text-zinc-400 hover:text-zinc-200 cursor-pointer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </button>
-                    </div>
-                </div>
 
                 <!-- Optional Provider API Key -->
                 <div id="api-key-container" class="space-y-1.5">
@@ -155,7 +107,7 @@
                     <p class="text-[11px] text-zinc-500 leading-relaxed">Leave blank to connect via SourNex server access, or add your own key (stored locally in your browser).</p>
                 </div>
 
-                <!-- Terms & Conditions Checkbox -->
+                <!-- Terms & Conditions Checkbox (Required for new account signup) -->
                 <div id="terms-container" class="flex items-start space-x-2.5 pt-1 hidden">
                     <input id="terms-checkbox" type="checkbox" class="mt-0.5 h-4 w-4 rounded bg-luxury-dark border-luxury-border text-luxury-gold focus:ring-0 focus:ring-offset-0 cursor-pointer shrink-0">
                     <label for="terms-checkbox" class="text-xs text-zinc-400 leading-snug select-none">
@@ -168,26 +120,8 @@
                     <div id="turnstile-slot"></div>
                 </div>
 
-                <!-- OTP INPUT STEP -->
-                <div id="otp-step-container" class="space-y-3 hidden">
-                    <div class="p-3 rounded-xl bg-luxury-gold/10 border border-luxury-gold/30 text-luxury-gold text-[11px] font-mono leading-relaxed space-y-1">
-                        <div class="flex items-center space-x-2 font-bold uppercase tracking-wider text-[10px]">
-                            <svg class="w-4 h-4 text-luxury-gold" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                            </svg>
-                            <span>Enter 6-Digit Security Code</span>
-                        </div>
-                        <p class="text-zinc-400">We sent a verification code to your email address.</p>
-                    </div>
-
-                    <div class="space-y-1">
-                        <label for="otp-code" class="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Verification OTP</label>
-                        <input id="otp-code" type="text" maxlength="6" placeholder="123456" class="text-center tracking-[0.5em] font-mono text-base font-bold" inputmode="numeric">
-                    </div>
-                </div>
-
                 <button id="btn-submit" type="submit" class="w-full min-h-[44px] py-2.5 text-xs font-bold tracking-widest uppercase rounded-xl bg-luxury-gold text-black hover:bg-amber-400 active:scale-[0.99] transition-all cursor-pointer">
-                    Verify Credentials
+                    Sign In with Email
                 </button>
             </form>
 
@@ -323,7 +257,7 @@
     </footer>
 
     <!-- EXTERNAL DEPENDENCIES -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.30/auth0-spa-js.production.js" defer></script>
 
     <!-- APPLICATION LOGIC SCRIPTS -->
     <script src="assets/js/toast.js" defer></script>
