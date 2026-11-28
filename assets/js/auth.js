@@ -1,11 +1,20 @@
-// 1. SUPABASE INITIALIZATION
-const SUPABASE_URL = 'https://qyznllcvbgeygusscpjs.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_NeNNwjPtDVVjSj5GgabI2Q_7JNnUslS';
-
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 1. AUTH0 CONFIGURATION
+const AUTH0_DOMAIN = 'dev-rlzsvnlicolgxd1n.us.auth0.com';
+const AUTH0_CLIENT_ID = 'duUzQWvusIuFMVO6ESniNH8hzuQtHNpF';
 
 window.currentUser = null;
 window.isUserLoggedIn = false;
+
+let auth0ClientInstance = null;
+
+window.getAuthAccessToken = async function () {
+    if (!auth0ClientInstance) return null;
+    try {
+        return await auth0ClientInstance.getTokenSilently();
+    } catch {
+        return null;
+    }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     const authOverlay = document.getElementById('auth-overlay');
@@ -16,19 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleMsg = document.getElementById('toggle-msg');
     const submitBtn = document.getElementById('btn-submit');
     const guestBypassBtn = document.getElementById('auth-guest-bypass');
-    const forgotPasswordLink = document.getElementById('forgot-password-link');
     const authLimitNotice = document.getElementById('auth-limit-notice');
     const authLimitNoticeText = document.getElementById('auth-limit-notice-text');
 
-    // Input containers
-    const usernameContainer = document.getElementById('username-container');
-    const dobContainer = document.getElementById('dob-container');
-    const confirmPasswordContainer = document.getElementById('confirm-password-container');
-    const apiKeyContainer = document.getElementById('api-key-container');
     const termsContainer = document.getElementById('terms-container');
     const captchaContainer = document.getElementById('captcha-container');
     const turnstileSlot = document.getElementById('turnstile-slot');
-    const otpStepContainer = document.getElementById('otp-step-container');
 
     // Header UI elements
     const accountStatusLabel = document.getElementById('account-status-label');
@@ -37,9 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const globalAccountBtn = document.getElementById('global-account-btn');
 
     let isSignUpMode = false;
-    let awaitingOtp = false;
-    let pendingEmail = '';
-    let isRecoveryMode = false;
+    let hasPendingUnverifiedSession = false;
 
     let turnstileConfig = { enabled: false, siteKey: null };
     let turnstileWidgetId = null;
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Load dynamic Turnstile configuration (avoids dummy hardcoded keys)
+    // Load dynamic Turnstile configuration
     fetch('/api/verify-turnstile')
         .then(r => (r.ok ? r.json() : null))
         .then(cfg => {
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Single-owner modal open/close controls
+    // Modal open/close controls
     window.openAuthModal = function (reasonMessage = '') {
         if (!authOverlay) return;
         const keyInput = document.getElementById('user-provider-key');
@@ -93,6 +93,17 @@ document.addEventListener('DOMContentLoaded', () => {
         authOverlay.setAttribute('aria-hidden', 'false');
     };
 
+    window.closeAuthModal = function () {
+        if (!authOverlay) return;
+        authOverlay.classList.add('hidden');
+        authOverlay.setAttribute('aria-hidden', 'true');
+        authLimitNotice?.classList.add('hidden');
+        if (typeof window.syncWorkspaceAccess === 'function') {
+            window.syncWorkspaceAccess();
+        }
+    };
+
+    // Optional OpenRouter API key controls
     const saveProviderKeyBtn = document.getElementById('save-provider-key-btn');
     const clearProviderKeyBtn = document.getElementById('clear-provider-key-btn');
 
@@ -120,310 +131,141 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.closeAuthModal = function () {
-        if (!authOverlay) return;
-        authOverlay.classList.add('hidden');
-        authOverlay.setAttribute('aria-hidden', 'true');
-        authLimitNotice?.classList.add('hidden');
-        // Re-evaluate guest access: keeps chat unlocked if tokens remain,
-        // or keeps only sending locked while prior messages stay readable if exhausted.
-        if (typeof window.syncWorkspaceAccess === 'function') {
-            window.syncWorkspaceAccess();
-        }
-    };
-
-    // Password visibility toggle logic
-    document.querySelectorAll('.toggle-password').forEach(button => {
-        button.addEventListener('click', () => {
-            const input = button.parentElement?.querySelector('input');
-            if (input) {
-                const isPassword = input.type === 'password';
-                input.type = isPassword ? 'text' : 'password';
-                button.setAttribute('aria-pressed', String(isPassword));
-                button.classList.toggle('text-luxury-gold', isPassword);
-                button.classList.toggle('text-zinc-500', !isPassword);
-            }
-        });
-    });
-
-    function clearSensitiveFields() {
-        const pwd = document.getElementById('password');
-        const confirmPwd = document.getElementById('confirm-password');
-        const otp = document.getElementById('otp-code');
-        if (pwd) pwd.value = '';
-        if (confirmPwd) confirmPwd.value = '';
-        if (otp) otp.value = '';
-    }
-
-    // Toggle between Sign In & Sign Up mode
+    // Toggle between Sign In & Create Account mode
     if (authToggleBtn) {
         authToggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
             isSignUpMode = !isSignUpMode;
-            isRecoveryMode = false;
-            awaitingOtp = false;
-            otpStepContainer?.classList.add('hidden');
-            clearSensitiveFields();
 
             if (isSignUpMode) {
-                authTitle.textContent = 'Register New Operator';
-                submitBtn.textContent = 'Send OTP Code';
-                toggleMsg.textContent = 'Already have an account?';
+                if (authTitle) authTitle.textContent = 'Create Account';
+                if (submitBtn) submitBtn.textContent = 'Create Account with Email';
+                if (toggleMsg) toggleMsg.textContent = 'Already have an account?';
                 authToggleBtn.textContent = 'Sign In';
-
-                usernameContainer?.classList.remove('hidden');
-                dobContainer?.classList.remove('hidden');
-                confirmPasswordContainer?.classList.remove('hidden');
-                apiKeyContainer?.classList.remove('hidden');
                 termsContainer?.classList.remove('hidden');
                 ensureTurnstileRendered();
             } else {
-                authTitle.textContent = 'Account Verification';
-                submitBtn.textContent = 'Verify Credentials';
-                toggleMsg.textContent = 'New to SourNex?';
+                if (authTitle) authTitle.textContent = 'Account Access';
+                if (submitBtn) submitBtn.textContent = 'Sign In with Email';
+                if (toggleMsg) toggleMsg.textContent = 'New to SourNex?';
                 authToggleBtn.textContent = 'Create Account';
-
-                usernameContainer?.classList.add('hidden');
-                dobContainer?.classList.add('hidden');
-                confirmPasswordContainer?.classList.add('hidden');
-                apiKeyContainer?.classList.remove('hidden');
                 termsContainer?.classList.add('hidden');
                 captchaContainer?.classList.add('hidden');
             }
         });
     }
 
-    // Forgot Password click handler
-    if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            isRecoveryMode = true;
-            isSignUpMode = false;
-            awaitingOtp = false;
-            clearSensitiveFields();
-
-            authTitle.textContent = 'Reset Password';
-            submitBtn.textContent = 'Send Recovery Code';
-
-            usernameContainer?.classList.add('hidden');
-            dobContainer?.classList.add('hidden');
-            confirmPasswordContainer?.classList.add('hidden');
-            apiKeyContainer?.classList.add('hidden');
-            termsContainer?.classList.add('hidden');
-            captchaContainer?.classList.add('hidden');
-            otpStepContainer?.classList.add('hidden');
+    async function ensureAuth0Ready() {
+        if (auth0ClientInstance) return auth0ClientInstance;
+        if (!window.auth0 || typeof window.auth0.createAuth0Client !== 'function') {
+            throw new Error('Authentication SDK failed to load. Please refresh the page.');
+        }
+        auth0ClientInstance = await window.auth0.createAuth0Client({
+            domain: AUTH0_DOMAIN,
+            clientId: AUTH0_CLIENT_ID,
+            cacheLocation: 'localstorage',
+            useRefreshTokens: true,
+            authorizationParams: {
+                redirect_uri: window.location.origin
+            }
         });
+        return auth0ClientInstance;
     }
 
-    // Form submission handler
+    async function verifyOptionalSignupChecks() {
+        if (!isSignUpMode) return true;
+
+        const termsChecked = document.getElementById('terms-checkbox')?.checked;
+        if (!termsChecked) {
+            notify('Please accept the Terms of Service and Privacy Policy.', 'warning');
+            return false;
+        }
+
+        if (turnstileConfig.enabled) {
+            const token = window.turnstile && turnstileWidgetId !== null
+                ? window.turnstile.getResponse(turnstileWidgetId)
+                : '';
+            if (!token) {
+                notify('Please complete the security CAPTCHA check.', 'warning');
+                return false;
+            }
+            const verifyRes = await fetch('/api/verify-turnstile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.success) {
+                if (window.turnstile && turnstileWidgetId !== null) {
+                    window.turnstile.reset(turnstileWidgetId);
+                }
+                throw new Error(verifyData.error || 'CAPTCHA verification failed.');
+            }
+        }
+
+        return true;
+    }
+
+    // Email / Password Universal Login launcher
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const email = document.getElementById('email')?.value.trim() || '';
-            const password = document.getElementById('password')?.value || '';
-
-            submitBtn.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
 
             try {
-                // STAGE A: FORGOT PASSWORD / RECOVERY FLOW
-                if (isRecoveryMode) {
-                    if (!awaitingOtp) {
-                        submitBtn.textContent = 'Sending Code...';
-                        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
-                        if (error) throw error;
+                const passed = await verifyOptionalSignupChecks();
+                if (!passed) return;
 
-                        pendingEmail = email;
-                        awaitingOtp = true;
-
-                        otpStepContainer?.classList.remove('hidden');
-                        confirmPasswordContainer?.classList.remove('hidden');
-                        submitBtn.textContent = 'Update Password';
-                        notify('Recovery code sent to your email.', 'info');
-                    } else {
-                        const otpToken = document.getElementById('otp-code')?.value.trim() || '';
-                        const newPassword = document.getElementById('password')?.value || '';
-                        const confirmNewPassword = document.getElementById('confirm-password')?.value || '';
-
-                        if (!otpToken || otpToken.length !== 6) {
-                            notify('Please enter a valid 6-digit OTP code.', 'warning');
-                            return;
-                        }
-                        if (newPassword.length < 6) {
-                            notify('New password must be at least 6 characters.', 'warning');
-                            return;
-                        }
-                        if (newPassword !== confirmNewPassword) {
-                            notify('Passwords do not match.', 'warning');
-                            return;
-                        }
-
-                        submitBtn.textContent = 'Updating...';
-
-                        const { error: verifyError } = await supabaseClient.auth.verifyOtp({
-                            email: pendingEmail,
-                            token: otpToken,
-                            type: 'recovery'
-                        });
-                        if (verifyError) throw verifyError;
-
-                        const { error: updateError } = await supabaseClient.auth.updateUser({
-                            password: newPassword
-                        });
-                        if (updateError) throw updateError;
-
-                        notify('Password updated! Please sign in with your new password.', 'success');
-                        isRecoveryMode = false;
-                        awaitingOtp = false;
-                        clearSensitiveFields();
-                        otpStepContainer?.classList.add('hidden');
-                        confirmPasswordContainer?.classList.add('hidden');
-                        authTitle.textContent = 'Account Verification';
-                        submitBtn.textContent = 'Verify Credentials';
-                    }
-                    return;
+                const client = await ensureAuth0Ready();
+                const authParams = {
+                    redirect_uri: window.location.origin
+                };
+                if (isSignUpMode) {
+                    authParams.screen_hint = 'signup';
+                } else if (hasPendingUnverifiedSession) {
+                    // Force fresh login check after user clicks verification email link
+                    authParams.prompt = 'login';
                 }
 
-                // STAGE B: OTP VERIFICATION FOR SIGN UP
-                if (awaitingOtp) {
-                    const otpToken = document.getElementById('otp-code')?.value.trim() || '';
-                    if (!otpToken || otpToken.length !== 6) {
-                        notify('Please enter a valid 6-digit OTP code.', 'warning');
-                        return;
-                    }
-
-                    submitBtn.textContent = 'Verifying Code...';
-
-                    const { data, error } = await supabaseClient.auth.verifyOtp({
-                        email: pendingEmail,
-                        token: otpToken,
-                        type: 'signup'
-                    });
-
-                    if (error) throw error;
-
-                    notify('OTP verified successfully. Account initialized.', 'success');
-                    awaitingOtp = false;
-                    if (data.session) handleSessionUpdate(data.session);
-
-                } else if (isSignUpMode) {
-                    // STAGE C: SIGN-UP DETAILS + OPTIONAL TURNSTILE VERIFICATION
-                    const username = document.getElementById('username')?.value.trim() || '';
-                    const dob = document.getElementById('dob')?.value || '';
-                    const confirmPassword = document.getElementById('confirm-password')?.value || '';
-                    const providerKey = document.getElementById('user-provider-key')?.value.trim() || '';
-                    const termsChecked = document.getElementById('terms-checkbox')?.checked;
-
-                    if (password.length < 6) {
-                        notify('Password must be at least 6 characters.', 'warning');
-                        return;
-                    }
-                    if (password !== confirmPassword) {
-                        notify('Passwords do not match.', 'warning');
-                        return;
-                    }
-                    if (!termsChecked) {
-                        notify('Please accept the Terms of Service and Privacy Policy.', 'warning');
-                        return;
-                    }
-
-                    if (turnstileConfig.enabled) {
-                        const token = window.turnstile && turnstileWidgetId !== null
-                            ? window.turnstile.getResponse(turnstileWidgetId)
-                            : '';
-                        if (!token) {
-                            notify('Please complete the security CAPTCHA check.', 'warning');
-                            return;
-                        }
-                        const verifyRes = await fetch('/api/verify-turnstile', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ token })
-                        });
-                        const verifyData = await verifyRes.json();
-                        if (!verifyRes.ok || !verifyData.success) {
-                            if (window.turnstile && turnstileWidgetId !== null) {
-                                window.turnstile.reset(turnstileWidgetId);
-                            }
-                            throw new Error(verifyData.error || 'CAPTCHA verification failed.');
-                        }
-                    }
-
-                    submitBtn.textContent = 'Sending Code...';
-
-                    const { error } = await supabaseClient.auth.signUp({
-                        email,
-                        password,
-                        options: {
-                            data: {
-                                username: username || null,
-                                date_of_birth: dob || null
-                            }
-                        }
-                    });
-
-                    if (error) throw error;
-
-                    if (providerKey) {
-                        localStorage.setItem('snx_user_provider_key', providerKey);
-                    }
-
-                    pendingEmail = email;
-                    awaitingOtp = true;
-
-                    usernameContainer?.classList.add('hidden');
-                    dobContainer?.classList.add('hidden');
-                    confirmPasswordContainer?.classList.add('hidden');
-                    apiKeyContainer?.classList.add('hidden');
-                    termsContainer?.classList.add('hidden');
-                    captchaContainer?.classList.add('hidden');
-
-                    otpStepContainer?.classList.remove('hidden');
-                    submitBtn.textContent = 'Confirm Security Code';
-                    notify('Verification OTP dispatched to your email.', 'info');
-
-                } else {
-                    // STAGE D: STANDARD SIGN IN
-                    submitBtn.textContent = 'Authenticating...';
-
-                    const { data, error } = await supabaseClient.auth.signInWithPassword({
-                        email,
-                        password
-                    });
-
-                    if (error) throw error;
-
-                    const providerKey = document.getElementById('user-provider-key')?.value.trim() || '';
-                    if (providerKey.startsWith('sk-') && providerKey.length >= 20) {
-                        localStorage.setItem('snx_user_provider_key', providerKey);
-                    }
-
-                    notify('Authenticated successfully.', 'success');
-                    handleSessionUpdate(data.session);
-                }
+                await client.loginWithRedirect({ authorizationParams: authParams });
             } catch (err) {
                 notify(`Authentication Error: ${err.message}`, 'error');
             } finally {
-                submitBtn.disabled = false;
-                if (!awaitingOtp) {
-                    submitBtn.textContent = isRecoveryMode
-                        ? 'Send Recovery Code'
-                        : (isSignUpMode ? 'Send OTP Code' : 'Verify Credentials');
-                }
+                if (submitBtn) submitBtn.disabled = false;
             }
         });
     }
 
-    // Social Auth
-    document.getElementById('btn-google')?.addEventListener('click', () => {
-        supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+    // Social Login (Google & GitHub)
+    document.getElementById('btn-google')?.addEventListener('click', async () => {
+        try {
+            const client = await ensureAuth0Ready();
+            await client.loginWithRedirect({
+                authorizationParams: {
+                    connection: 'google-oauth2',
+                    redirect_uri: window.location.origin
+                }
+            });
+        } catch (err) {
+            notify(`Google Sign-In Error: ${err.message}`, 'error');
+        }
     });
 
-    document.getElementById('btn-github')?.addEventListener('click', () => {
-        supabaseClient.auth.signInWithOAuth({ provider: 'github' });
+    document.getElementById('btn-github')?.addEventListener('click', async () => {
+        try {
+            const client = await ensureAuth0Ready();
+            await client.loginWithRedirect({
+                authorizationParams: {
+                    connection: 'github',
+                    redirect_uri: window.location.origin
+                }
+            });
+        } catch (err) {
+            notify(`GitHub Sign-In Error: ${err.message}`, 'error');
+        }
     });
 
-    // Modal dismiss handlers (X button, guest bypass, Escape key)
+    // Modal dismiss handlers
     guestBypassBtn?.addEventListener('click', (e) => {
         e.preventDefault();
         window.closeAuthModal();
@@ -441,56 +283,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Global topbar account action
     globalAccountBtn?.addEventListener('click', async () => {
-        if (window.isUserLoggedIn) {
+        if (window.isUserLoggedIn || hasPendingUnverifiedSession) {
+            const promptLabel = hasPendingUnverifiedSession
+                ? 'Sign out of this unverified session?'
+                : 'Sign out of your SourNex account?';
             const confirmed = window.showConfirmToast
-                ? await window.showConfirmToast('Sign out of your SourNex account?', 'Sign Out', 'Stay')
+                ? await window.showConfirmToast(promptLabel, 'Sign Out', 'Stay')
                 : false;
             if (confirmed) {
-                await supabaseClient.auth.signOut();
-                notify('Signed out. Switched back to Guest Profile.', 'info');
+                try {
+                    const client = await ensureAuth0Ready();
+                    await client.logout({
+                        logoutParams: { returnTo: window.location.origin }
+                    });
+                } catch (err) {
+                    notify(`Sign out failed: ${err.message}`, 'error');
+                }
             }
         } else {
             window.openAuthModal();
         }
     });
-
-    // Session state handler
-    function handleSessionUpdate(session) {
-        if (awaitingOtp) {
-            return;
-        }
-
-        if (session && session.user) {
-            const isEmailVerified = session.user.email_confirmed_at !== null;
-
-            if (!isEmailVerified) {
-                supabaseClient.auth.signOut();
-                window.currentUser = null;
-                window.isUserLoggedIn = false;
-                updateHeaderIdentity('Guest Profile', null, false);
-                if (typeof window.syncWorkspaceAccess === 'function') {
-                    window.syncWorkspaceAccess();
-                }
-                return;
-            }
-
-            window.currentUser = session.user;
-            window.isUserLoggedIn = true;
-
-            const metadata = session.user.user_metadata || {};
-            const username = metadata.username || session.user.email.split('@')[0];
-
-            updateHeaderIdentity('Authenticated', username, true);
-            window.closeAuthModal();
-        } else {
-            window.currentUser = null;
-            window.isUserLoggedIn = false;
-            updateHeaderIdentity('Guest Profile', null, false);
-            if (typeof window.syncWorkspaceAccess === 'function') {
-                window.syncWorkspaceAccess();
-            }
-        }
-    }
 
     function updateHeaderIdentity(statusLabel, username, isLoggedIn) {
         if (accountStatusLabel) accountStatusLabel.textContent = statusLabel;
@@ -507,9 +320,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-        handleSessionUpdate(session);
-    });
-});
+    function applyUserSession(user, justAuthenticated = false) {
+        if (user) {
+            const isEmailVerified = user.email_verified !== false;
+            if (!isEmailVerified) {
+                hasPendingUnverifiedSession = true;
+                window.currentUser = null;
+                window.isUserLoggedIn = false;
+                updateHeaderIdentity('Verify Email', null, false);
+                if (typeof window.syncWorkspaceAccess === 'function') {
+                    window.syncWorkspaceAccess();
+                }
+                const targetEmail = user.email ? ` (${user.email})` : '';
+                window.openAuthModal(`Verification link sent to your email${targetEmail}. Please open your inbox and verify your email, then click "Sign In with Email" again.`);
+                return;
+            }
 
-            
+            hasPendingUnverifiedSession = false;
+            window.currentUser = user;
+            window.isUserLoggedIn = true;
+
+            const rawHandle = user.nickname || user.preferred_username || user.name || (user.email ? user.email.split('@')[0] : 'operator');
+            const cleanHandle = String(rawHandle).replace(/\s+/g, '').slice(0, 24);
+            updateHeaderIdentity('Authenticated', cleanHandle, true);
+
+            if (justAuthenticated) {
+                notify('Authenticated successfully.', 'success');
+            }
+            window.closeAuthModal();
+        } else {
+            hasPendingUnverifiedSession = false;
+            window.currentUser = null;
+            window.isUserLoggedIn = false;
+            updateHeaderIdentity('Guest Profile', null, false);
+            if (typeof window.syncWorkspaceAccess === 'function') {
+                window.syncWorkspaceAccess();
+            }
+        }
+    }
+
+    async function initAuth0Session() {
+        try {
+            const client = await ensureAuth0Ready();
+            const params = new URLSearchParams(window.location.search);
+            let justAuthenticated = false;
+
+            if (params.has('error')) {
+                const errMsg = params.get('error_description') || params.get('error') || 'Authentication canceled.';
+                window.history.replaceState({}, document.title, window.location.pathname);
+                notify(`Auth Notice: ${errMsg}`, 'warning');
+            } else if (params.has('code') && params.has('state')) {
+                await client.handleRedirectCallback();
+                window.history.replaceState({}, document.title, window.location.pathname);
+                justAuthenticated = true;
+            }
+
+            const isAuthenticated = await client.isAuthenticated();
+            if (isAuthenticated) {
+                const user = await client.getUser();
+                applyUserSession(user || null, justAuthenticated);
+            } else {
+                applyUserSession(null, false);
+            }
+        } catch (err) {
+            console.warn('Auth0 initialization fallback to Guest mode:', err);
+            applyUserSession(null, false);
+        }
+    }
+
+    initAuth0Session();
+});
